@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+body { background: #050510; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; position: fixed; width: 100%; }
+.ticker-wrap { width: 100%; height: 30px; background: #000; border-bottom: 1px solid #00ffe1; z-index: 1000; position: relative; }
+.ticker { display: inline-block; line-height: 30px; white-space: nowrap; animation: ticker 15s linear infinite; color: #00ffe1; font-weight: bold; font-size: 14px; }
+@keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+.header { height: 40px; background: rgba(10, 10, 20, 0.9); border-bottom: 1px solid #00ffe1; display: flex; align-items: center; justify-content: center; z-index: 900; color: #00ffe1; font-size: 14px; }
+.pillar { position: fixed; bottom: 85px; width: 10px; z-index: 50; background: linear-gradient(to top, #222, #666, #999); border-radius: 2px; height: 45vh; }
+.left-p { left: 10px; } .right-p { right: 10px; }
+
+/* СТИЛЬ ШАРИКОВ-ПИКСЕЛЕЙ */
+.pixel-bubble {
+  position: fixed;
+  width: 4px; /* Размер пикселя */
+  height: 4px;
+  background: #fff;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: 0 0 2px #fff, 0 0 4px #00ffe1; /* Свечение */
+  border-radius: 50%; /* Делаем шариком */
+  opacity: 1;
+  will-change: transform, opacity;
+}
+
+.chat-box { flex: 1; overflow-y: auto; padding: 15px 15px 160px 50px; display: flex; flex-direction: column; z-index: 100; height: calc(100vh - 70px); }
+.msg { padding: 10px; margin: 5px 0; max-width: 85%; border-radius: 12px; font-size: 14px; border: 1px solid rgba(0, 255, 225, 0.2); background: rgba(10, 10, 25, 0.8); }
+.me { align-self: flex-end; border-color: #00ffe1; }
+.other { align-self: flex-start; border-color: #333; }
+.msg-id { font-size: 9px; color: #00ffe1; margin-bottom: 4px; font-family: monospace; }
+.controls { position: fixed; bottom: 68px; width: 100%; padding: 0 10px; display: flex; gap: 5px; z-index: 2000; }
+.btn { flex: 1; height: 38px; background: #000; color: #00ffe1; border: 1px solid #00ffe1; border-radius: 5px; font-size: 10px; font-weight: bold; }
+.input-row { position: fixed; bottom: 10px; width: 100%; padding: 0 10px; display: flex; height: 50px; gap: 8px; z-index: 9999; }
+input { flex: 1; background: #000; border: 2px solid #00ffe1; border-radius: 25px; color: #fff; padding: 0 15px; font-size: 16px; outline: none; }
+.send-btn { width: 55px; height: 50px; background: #008070; color: #fff; border: none; border-radius: 50%; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="ticker-wrap"><div class="ticker">Serega тестирует чат. Приятного прослушивания.</div></div>
+<div class="header">ID: <span id="my-id-display">...</span></div>
+<div class="pillar left-p"></div><div class="pillar right-p"></div>
+<div class="chat-box" id="chat"><div id="msgs"></div></div>
+<div class="controls">
+ <button class="btn" onclick="startAudio()">📻 РАДИО</button>
+ <button class="btn" onclick="setPriv()">🔐 ПРИВАТ</button>
+ <button class="btn" id="exit-btn" onclick="setGlob()" style="display:none;">🌐 ОБЩИЙ</button>
+</div>
+<div class="input-row">
+  <input id="minp" placeholder="Напиши..." autocomplete="off">
+  <button class="send-btn" onclick="send()">➤</button>
+</div>
+<audio id="audio" crossorigin="anonymous"></audio>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const fcfg = { apiKey: "AIzaSyCWoZbN4Ot724s-G1EbkylA0AqqWQiGt5o", authDomain: "radiochatss.firebaseapp.com", databaseURL: "https://radiochatss-default-rtdb.firebaseio.com", projectId: "radiochatss" };
+if (!firebase.apps.length) firebase.initializeApp(fcfg);
+const db = firebase.database();
+let myId = localStorage.getItem("ts_id_v25") || "U-" + Math.floor(1000+Math.random()*8999);
+localStorage.setItem("ts_id_v25", myId);
+document.getElementById("my-id-display").innerText = myId;
+let curPath = "chat/global";
+function loadChat(p) {
+  curPath = p; document.getElementById("msgs").innerHTML = "";
+  db.ref(curPath).off();
+  db.ref(curPath).limitToLast(30).on("child_added", (s) => {
+    const d = s.val(); if(!d || !d.txt) return;
+    const div = document.createElement("div");
+    div.className = "msg " + (d.id === myId ? "me" : "other");
+    div.innerHTML = `<div class="msg-id">${d.id}</div>${d.txt}`;
+    document.getElementById("msgs").appendChild(div);
+    const cb = document.getElementById("chat"); cb.scrollTop = cb.scrollHeight;
+  });
+}
+function send() {
+  const i = document.getElementById("minp"); if(!i.value.trim()) return;
+  db.ref(curPath).push({ txt: i.value, id: myId, ts: Date.now() }); i.value = "";
+}
+const player = document.getElementById("audio");
+let aCtx, anl, data, isRunning = false;
+function startAudio() {
+  if(!aCtx) aCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(!isRunning) {
+    player.src = "https://ep128.hostingradio.ru:8030/ep128";
+    player.play().then(() => {
+      isRunning = true; anl = aCtx.createAnalyser();
+      aCtx.createMediaElementSource(player).connect(anl); anl.connect(aCtx.destination);
+      anl.fftSize = 64; data = new Uint8Array(anl.frequencyBinCount); loop();
+    });
+  } else { player.pause(); isRunning = false; }
+}
+
+// ФУНКЦИЯ СОЗДАНИЯ И АНИМАЦИИ ПОДЪЕМА ШАРИКОВ
+function drawPixelBubbles(side, power) {
+  const startX = side === 'left' ? 15 : window.innerWidth - 15;
+  const startY = window.innerHeight * 0.45 + 85; // Верхушка столба
+  
+  // Количество шариков зависит от силы баса
+  const count = Math.floor(power / 30); 
+
+  for (let i = 0; i < count; i++) {
+    const bubble = document.createElement("div");
+    bubble.className = "pixel-bubble";
+    
+    // Небольшой разброс по X
+    const pX = startX + (Math.random() - 0.5) * 15;
+    bubble.style.left = pX + "px";
+    bubble.style.bottom = startY + "px";
+    
+    // Случайная скорость подъема и высота
+    const duration = 1 + Math.random() * 2; // секунды
+    const height = 100 + Math.random() * 200; // пиксели
+
+    document.body.appendChild(bubble);
+
+    // Анимация через JS (JS Animations API) для простоты
+    bubble.animate([
+      { transform: 'translateY(0px)', opacity: 1 },
+      { transform: `translateY(-${height}px)`, opacity: 0 }
+    ], {
+      duration: duration * 1000,
+      easing: 'ease-out'
+    }).onfinish = () => bubble.remove();
+  }
+}
+
+let lastStrike = 0;
+function loop() {
+  if(!isRunning) return; requestAnimationFrame(loop); anl.getByteFrequencyData(data);
+  let now = Date.now();
+  
+  // Реагируем на бас (data[1])
+  if(data[1] > 200 && now - lastStrike > 100) {
+    drawPixelBubbles('left', data[1]); drawPixelBubbles('right', data[1]); 
+    lastStrike = now;
+  }
+}
+function setPriv() { let t = prompt("ID:"); if(t) { loadChat("chat/private_" + [myId, t.trim().toUpperCase()].sort().join("_")); document.getElementById("exit-btn").style.display="block"; } }
+function setGlob() { loadChat("chat/global"); document.getElementById("exit-btn").style.display="none"; }
+loadChat("chat/global");
+</script>
+</body>
+</html>
+
