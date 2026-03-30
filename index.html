@@ -5,72 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tanson Platinum</title>
     <style>
-        :root { --neon: #00ffe1; --pink: #ff00ff; --bg: #050510; }
+        :root { --neon: #00ffe1; --pink: #ff00ff; --bg: #050510; --panel: #0a0a1a; }
         body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Экран входа */
-        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .auth-box { text-align: center; padding: 30px; border: 1px solid var(--neon); border-radius: 20px; background: #000; }
-        
-        /* Шапка */
-        .header { background: #000; padding: 12px 15px; border-bottom: 1px solid var(--neon); display: flex; justify-content: space-between; align-items: center; }
-        .search-box { display: flex; gap: 5px; align-items: center; }
-        .search-box input { width: 80px; background: #111; border: 1px solid #333; color: #fff; border-radius: 8px; padding: 5px; transition: 0.3s; }
-        .search-box input:focus { width: 120px; border-color: var(--neon); }
-
-        /* Списки и Окна */
-        .screen { display: none; flex-direction: column; height: 100%; }
+        /* Фикс для того, чтобы контент не залезал под клавиатуру */
+        .screen { display: none; flex-direction: column; height: 100%; position: relative; }
         .active { display: flex; }
-        #contacts-list { padding: 15px; flex: 1; overflow-y: auto; }
-        .contact-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; }
 
-        /* Чат */
-        #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 14px; border-radius: 15px; max-width: 80%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); position: relative; }
+        .header { background: #000; padding: 10px 15px; border-bottom: 1px solid var(--neon); display: flex; justify-content: space-between; align-items: center; min-height: 50px; }
+        
+        /* Список контактов */
+        #contacts-list { padding: 15px; flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .contact-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #222; display: flex; align-items: center; gap: 10px; }
+
+        /* Окно чата */
+        #chat-window { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 100px; }
+        .msg { padding: 10px 14px; border-radius: 15px; max-width: 80%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); position: relative; word-wrap: break-word; }
         .me { align-self: flex-end; border-color: var(--neon); background: rgba(0,255,225,0.1); }
         
-        /* Кнопки и ввод */
-        .input-area { padding: 10px; background: #000; display: flex; gap: 8px; align-items: center; border-top: 1px solid #222; }
-        .circle-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--neon); color: #000; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 20px; }
-        #m-inp { flex: 1; background: #111; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 20px; outline: none; }
+        /* ЖЕСТКИЙ ФИКС ПАНЕЛИ ВВОДА */
+        .input-area { 
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding: 12px; background: #000; border-top: 1px solid #222;
+            display: flex; gap: 8px; align-items: center; z-index: 9999;
+        }
         
+        .circle-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--neon); color: #000; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 20px; }
+        #m-inp { flex: 1; background: #111; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 25px; outline: none; font-size: 16px; }
+
         /* Меню удаления */
         #del-menu { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; }
-        .del-box { background: #151525; padding: 25px; border-radius: 20px; border: 1px solid var(--neon); width: 260px; text-align: center; }
-        
-        #voice-btn.recording { background: #ff0055; animation: pulse 1s infinite; }
-        @keyframes pulse { 50% { opacity: 0.5; } }
+        .del-box { background: var(--panel); padding: 25px; border-radius: 20px; border: 1px solid var(--neon); width: 280px; text-align: center; }
+
+        #voice-btn.recording { background: #ff0055; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.4; } }
         audio { width: 100%; height: 35px; filter: invert(1); margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div id="auth-screen">
-    <div class="auth-box">
-        <h2 style="color:var(--neon); margin-top:0;">TANSON</h2>
-        <input id="nick-inp" style="padding:12px; width:200px; border-radius:10px; border:none;" placeholder="Ник...">
+<div id="auth-screen" style="position:fixed; inset:0; background:var(--bg); z-index:10001; display:flex; align-items:center; justify-content:center;">
+    <div style="text-align:center; padding:30px; border:1px solid var(--neon); border-radius:20px; background:#000;">
+        <h2 style="color:var(--neon); margin:0 0 20px 0;">TANSON</h2>
+        <input id="nick-inp" style="padding:12px; width:200px; border-radius:10px; border:1px solid #333; background:#111; color:#fff;" placeholder="Ник...">
         <button onclick="login()" style="display:block; width:100%; margin-top:15px; padding:12px; background:var(--neon); border:none; border-radius:10px; font-weight:bold;">ВОЙТИ</button>
     </div>
 </div>
 
 <div id="del-menu" onclick="this.style.display='none'">
     <div class="del-box" onclick="event.stopPropagation()">
-        <button id="del-all-btn" style="width:100%; padding:12px; margin-bottom:10px; background:var(--neon); border:none; border-radius:10px; font-weight:bold;">Удалить у всех</button>
-        <button id="del-me-btn" style="width:100%; padding:12px; background:#333; color:#fff; border:none; border-radius:10px;">Удалить у себя</button>
+        <button id="del-all-btn" style="width:100%; padding:12px; margin-bottom:12px; background:var(--neon); border:none; border-radius:10px; font-weight:bold;">Удалить у всех</button>
+        <button id="del-me-btn" style="width:100%; padding:12px; background:#333; color:#fff; border:none; border-radius:10px;">Удалить только у себя</button>
     </div>
 </div>
 
 <div id="main-screen" class="screen active">
     <div class="header">
-        <b style="color:var(--neon)">TANSON</b>
-        <div class="search-box">
-            <input type="text" id="search-inp" placeholder="Ник друга">
-            <button onclick="addFriend()" style="background:none; border:none; color:var(--neon); font-size:20px;">🔍</button>
+        <b style="color:var(--neon); letter-spacing:1px;">TANSON</b>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="search-inp" style="width:70px; background:#111; border:1px solid #333; color:#fff; border-radius:5px; padding:4px;" placeholder="Ник">
+            <button onclick="addFriend()" style="background:none; border:none; color:var(--neon); font-size:18px;">🔍</button>
+            <button style="background:none; border:none; color:#555; font-size:18px;">⚙️</button>
         </div>
     </div>
-    <div id="contacts-list">
-        <div class="contact-item" onclick="goChat('global')"><b>🌍 Общий Чат</b></div>
-    </div>
+    <div id="contacts-list"></div>
 </div>
 
 <div id="chat-screen" class="screen">
@@ -79,31 +77,31 @@
             <button onclick="goMain()" style="background:none; border:none; color:var(--neon); font-size:24px;">←</button>
             <b id="chat-title">Чат</b>
         </div>
-        <div id="status-ui" style="color:#00ff00; font-size:10px;">в сети</div>
+        <div style="color:#00ff00; font-size:10px;">в сети</div>
     </div>
     <div id="chat-window"></div>
-    <div id="typing-ui" style="color:var(--neon); font-size:10px; padding-left:20px; height:12px; opacity:0;">печатает...</div>
+    <div id="typing-ui" style="color:var(--neon); font-size:10px; position:absolute; bottom:75px; left:20px; opacity:0;">печатает...</div>
     <div class="input-area">
-        <button class="circle-btn" style="background:none; border:1px solid var(--neon); color:var(--neon);" onclick="document.getElementById('file-inp').click()">📎</button>
+        <button class="circle-btn" style="background:none; border:1px solid var(--neon); color:var(--neon);" onclick="document.getElementById('f-up').click()">📎</button>
         <button id="voice-btn" class="circle-btn" style="background:none; border:1px solid var(--pink); color:var(--pink);">🎤</button>
         <input id="m-inp" placeholder="Сообщение..." oninput="sendTyping()">
         <button class="circle-btn" onclick="send('text')">➤</button>
     </div>
 </div>
 
-<input type="file" id="file-inp" style="display:none" accept="image/*" onchange="upFile(this.files[0])">
+<input type="file" id="f-up" style="display:none" accept="image/*" onchange="upFile(this.files[0])">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const S_URL = 'https://yialdvgdpuazzedpxozc.supabase.co';
     const S_KEY = 'sb_publishable_obvuV6Of_iUSWBy6phzv5w_eSQl0YYt'; 
     const sb = supabase.createClient(S_URL, S_KEY);
-    const msgSound = new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3');
+    const audioIn = new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3');
 
     let user = localStorage.getItem("tanson_nick");
     let currentChannel = 'global';
     let mediaRec, chunks = [], pTimer, selId;
-    let friends = JSON.parse(localStorage.getItem("tanson_friends") || "[]");
+    let friends = JSON.parse(localStorage.getItem("t_friends") || "[]");
 
     if(user) { document.getElementById('auth-screen').style.display='none'; init(); }
 
@@ -116,18 +114,16 @@
         const n = document.getElementById('search-inp').value.trim();
         if(n && !friends.includes(n) && n !== user) {
             friends.push(n);
-            localStorage.setItem("tanson_friends", JSON.stringify(friends));
+            localStorage.setItem("t_friends", JSON.stringify(friends));
             renderContacts();
             document.getElementById('search-inp').value = '';
         }
     }
 
     function renderContacts() {
-        const container = document.getElementById('contacts-list');
-        container.innerHTML = '<div class="contact-item" onclick="goChat(\'global\')"><b>🌍 Общий Чат</b></div>';
-        friends.forEach(f => {
-            container.innerHTML += `<div class="contact-item" onclick="goChat('${f}')"><b>👤 ${f}</b></div>`;
-        });
+        const c = document.getElementById('contacts-list');
+        c.innerHTML = '<div class="contact-item" onclick="goChat(\'global\')"><b>🌍 Общий Чат</b></div>';
+        friends.forEach(f => { c.innerHTML += `<div class="contact-item" onclick="goChat('${f}')"><b>👤 ${f}</b></div>`; });
     }
 
     function goChat(chan) {
@@ -136,7 +132,7 @@
         document.getElementById('chat-screen').classList.add('active');
         document.getElementById('chat-title').innerText = chan === 'global' ? 'Общий Чат' : chan;
         document.getElementById('chat-window').innerHTML = '';
-        loadMsgs();
+        load();
     }
 
     function goMain() {
@@ -146,21 +142,15 @@
 
     async function init() {
         renderContacts();
-        
-        // REALTIME: Слушаем всё (вставка и удаление)
-        sb.channel('tanson_core').on('postgres_changes', {event:'*', schema:'public', table:'messages'}, p => {
+        sb.channel('tanson_v8').on('postgres_changes', {event:'*', schema:'public', table:'messages'}, p => {
             if(p.eventType === 'INSERT') {
                 const m = p.new;
-                const isMine = (m.channel === currentChannel || (!m.channel && currentChannel === 'global'));
-                const isPrivate = (m.channel === user && m.user_id === currentChannel);
-                if(isMine || isPrivate) {
+                if(m.channel === currentChannel || (!m.channel && currentChannel === 'global') || (m.channel === user && m.user_id === currentChannel)) {
                     renderMsg(m);
-                    if(m.user_id !== user) msgSound.play().catch(()=>{});
+                    if(m.user_id !== user) audioIn.play().catch(()=>{});
                 }
             }
-            if(p.eventType === 'DELETE') {
-                document.getElementById('msg-' + p.old.id)?.remove();
-            }
+            if(p.eventType === 'DELETE') document.getElementById('msg-' + p.old.id)?.remove();
         }).on('broadcast', {event:'typing'}, p => {
             if(p.payload.u === currentChannel) {
                 document.getElementById('typing-ui').style.opacity = 1;
@@ -168,11 +158,10 @@
                 window.tOut = setTimeout(() => document.getElementById('typing-ui').style.opacity = 0, 2000);
             }
         }).subscribe();
-
-        setupAudio();
+        setupVoice();
     }
 
-    async function loadMsgs() {
+    async function load() {
         const { data } = await sb.from('messages').select('*').order('created_at', {ascending:true});
         if(data) data.forEach(m => {
             const isGlobal = (m.channel === 'global' || !m.channel) && currentChannel === 'global';
@@ -188,14 +177,12 @@
         div.id = 'msg-'+d.id;
         div.className = `msg ${d.user_id === user ? 'me' : ''}`;
         
-        let content = `<small style="color:var(--neon); font-size:9px;">${d.user_id}</small><br>`;
-        if(d.type==='voice') content += `<audio src="${d.file_url}" controls></audio>`;
-        else if(d.type==='image') content += `<img src="${d.file_url}" style="max-width:100%; border-radius:10px; margin-top:5px;">`;
-        else content += d.text || "";
+        let html = `<small style="color:var(--neon); font-size:9px;">${d.user_id}</small><br>`;
+        if(d.type==='voice') html += `<audio src="${d.file_url}" controls></audio>`;
+        else if(d.type==='image') html += `<img src="${d.file_url}" style="max-width:100%; border-radius:10px; margin-top:5px;">`;
+        else html += d.text || "";
         
-        div.innerHTML = content;
-
-        // Удержание для удаления
+        div.innerHTML = html;
         const start = () => pTimer = setTimeout(() => { selId=d.id; document.getElementById('del-menu').style.display='flex'; }, 800);
         const stop = () => clearTimeout(pTimer);
         div.onmousedown = start; div.onmouseup = stop;
@@ -205,7 +192,6 @@
         win.scrollTop = win.scrollHeight;
     }
 
-    // ЛОГИКА УДАЛЕНИЯ
     document.getElementById('del-all-btn').onclick = async () => {
         await sb.from('messages').delete().eq('id', selId);
         document.getElementById('del-menu').style.display = 'none';
@@ -215,7 +201,6 @@
         document.getElementById('del-menu').style.display = 'none';
     };
 
-    // ОТПРАВКА (Твои настройки аудио не трогал)
     async function send(t, url=null) {
         const i = document.getElementById('m-inp');
         if(!i.value.trim() && !url) return;
@@ -224,33 +209,27 @@
     }
 
     function sendTyping() { 
-        sb.channel('tanson_core').send({type:'broadcast', event:'typing', payload:{u:user}}); 
+        sb.channel('tanson_v8').send({type:'broadcast', event:'typing', payload:{u:user}}); 
     }
 
-    function setupAudio() {
+    function setupVoice() {
         const btn = document.getElementById('voice-btn');
         btn.onclick = async () => {
-            if(mediaRec && mediaRec.state === "recording") {
-                mediaRec.stop();
-                btn.classList.remove('recording');
-                return;
-            }
+            if(mediaRec && mediaRec.state === "recording") { mediaRec.stop(); btn.classList.remove('recording'); return; }
             const s = await navigator.mediaDevices.getUserMedia({audio:true});
-            mediaRec = new MediaRecorder(s);
-            chunks = [];
+            mediaRec = new MediaRecorder(s); chunks = [];
             mediaRec.ondataavailable = e => chunks.push(e.data);
             mediaRec.onstop = async () => {
                 const blob = new Blob(chunks, {type: 'audio/webm'});
-                const fileName = `v_${Date.now()}.webm`;
-                const { data } = await sb.storage.from('uploads').upload(fileName, blob);
+                const name = `v_${Date.now()}.webm`;
+                const { data } = await sb.storage.from('uploads').upload(name, blob);
                 if(data) {
-                    const { data: { publicUrl } } = sb.storage.from('uploads').getPublicUrl(fileName);
+                    const { data: { publicUrl } } = sb.storage.from('uploads').getPublicUrl(name);
                     send('voice', publicUrl);
                 }
                 s.getTracks().forEach(t => t.stop());
             };
-            mediaRec.start();
-            btn.classList.add('recording');
+            mediaRec.start(); btn.classList.add('recording');
         };
     }
 
