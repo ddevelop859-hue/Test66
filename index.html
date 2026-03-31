@@ -1,235 +1,169 @@
-
-  <!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html><html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Messenger</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-<style>
+<title>Messenger</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script><style>
 body {
     margin:0;
     font-family:Arial;
-    background:#0b0f1a;
+    background:#0b0f2a;
     color:white;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
 }
 
-/* HEADER */
-.header {
-    position:fixed;
-    top:0;
-    width:100%;
-    padding:15px;
-    background:#020617;
-    text-align:center;
-    font-weight:bold;
-    border-bottom:1px solid #1e293b;
-}
-
-/* CHAT */
 #chat {
-    margin-top:60px;
-    margin-bottom:70px;
-    padding:10px;
+    flex:1;
     overflow-y:auto;
-    height:calc(100vh - 130px);
+    padding:10px;
 }
 
-/* MESSAGE */
 .msg {
+    background:#1a1f4a;
+    padding:8px;
+    border-radius:10px;
+    margin:5px 0;
     max-width:70%;
-    margin:8px 0;
-    padding:10px 12px;
-    border-radius:15px;
-    background:#1e293b;
-    word-wrap:break-word;
-    animation:fade .2s ease;
 }
 
 .me {
+    background:#2a6df5;
     margin-left:auto;
-    background:#2563eb;
 }
 
-audio {
-    width:200px;
-}
-
-/* INPUT */
-#inputBox {
-    position:fixed;
-    bottom:0;
-    width:100%;
+.bottom {
     display:flex;
-    align-items:center;
     padding:10px;
-    background:#020617;
-    border-top:1px solid #1e293b;
+    background:#000;
 }
 
-#input {
+input {
     flex:1;
     padding:10px;
     border:none;
-    border-radius:20px;
+    border-radius:10px;
     outline:none;
-    background:#111827;
-    color:white;
 }
 
-.btn {
-    margin-left:8px;
-    width:40px;
-    height:40px;
+button {
+    margin-left:5px;
+    padding:10px;
     border:none;
-    border-radius:50%;
-    background:#2563eb;
+    border-radius:10px;
+    background:#2a6df5;
     color:white;
-    font-size:18px;
 }
 
-/* VOICE PANEL */
 #voice-panel {
     display:none;
-    position:fixed;
-    bottom:80px;
-    left:10px;
-    right:10px;
-    background:#111827;
-    padding:15px;
-    border-radius:15px;
-    text-align:center;
+    padding:10px;
+    background:#111;
 }
+</style></head><body><div id="chat"></div><div id="voice-panel">
+    <audio id="preview" controls></audio><br>
+    <button onclick="stopRec()">⏹</button>
+    <button onclick="sendVoice()">✔</button>
+</div><div class="bottom">
+    <input id="msg" placeholder="Сообщение...">
+    <button onclick="sendMsg()">➤</button>
+    <button id="recBtn">🎤</button>
+</div><script>
+const SUPABASE_URL = "https://yialdvgdpuazzedpxozc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_obvuV6Of_iUSWBy6phzv5w_eSQl0YYt";
 
-@keyframes fade {
-    from {opacity:0; transform:translateY(5px);}
-    to {opacity:1;}
-}
-</style>
-</head>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-<body>
+let userData = {
+    name: "user_" + Math.floor(Math.random()*1000)
+};
 
-<div class="header">💬 Online Chat</div>
+const chat = document.getElementById("chat");
 
-<div id="chat"></div>
+function render(msg){
+    let div = document.createElement("div");
+    div.className = "msg" + (msg.user_id === userData.name ? " me":"");
 
-<div id="voice-panel">
-    🎤 Запись...<br><br>
-    <audio id="v-preview" controls style="display:none;"></audio><br><br>
-    <button class="btn" onclick="stopRec()">⏹</button>
-    <button class="btn" onclick="sendVoice()" id="v-send" style="display:none;">✔</button>
-    <button class="btn" onclick="cancelRec()">✖</button>
-</div>
-
-<div id="inputBox">
-    <input id="input" placeholder="Сообщение...">
-    <button class="btn" onclick="sendMsg()">➤</button>
-    <button class="btn" onclick="startRec()">🎤</button>
-</div>
-
-<script>
-const sb = supabase.createClient(
-    "https://yialdvgdpuazzedpxozc.supabase.co",
-    "sb_publishable_obvuV6Of_iUSWBy6phzv5w_eSQl0YYt"
-);
-
-const user = "user_" + Math.floor(Math.random()*10000);
-const chat = document.getElementById('chat');
-const input = document.getElementById('input');
-
-/* TEXT */
-async function sendMsg(){
-    if(!input.value) return;
-
-    await sb.from('messages').insert([
-        { user_id:user, text:input.value, type:'text' }
-    ]);
-
-    input.value='';
-    loadMsgs();
-}
-
-/* RENDER */
-function renderMsg(m){
-    const div = document.createElement('div');
-    div.className = 'msg ' + (m.user_id===user?'me':'');
-
-    if(m.type==='voice'){
-        const a = document.createElement('audio');
-        a.controls = true;
-        a.src = m.voice;
-        div.appendChild(a);
+    if(msg.type === "voice"){
+        div.innerHTML = `<audio controls src="${msg.voice}"></audio>`;
     } else {
-        div.textContent = m.text;
+        div.innerText = msg.text;
     }
 
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
 
-/* LOAD */
-async function loadMsgs(){
-    const { data } = await sb.from('messages').select('*').order('id');
-    chat.innerHTML='';
-    data.forEach(renderMsg);
+async function load(){
+    let {data} = await sb.from("messages").select("*").order("id",{ascending:true});
+    chat.innerHTML="";
+    data.forEach(render);
 }
 
-setInterval(loadMsgs,2000);
-loadMsgs();
+load();
 
-/* VOICE */
+sb.channel('chat')
+.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},payload=>{
+    render(payload.new);
+})
+.subscribe();
+
+async function sendMsg(){
+    let text = msg.value;
+    if(!text) return;
+
+    await sb.from("messages").insert([{
+        user_id:userData.name,
+        text:text,
+        type:"text"
+    }]);
+
+    msg.value="";
+}
+
+/* ===== ГОЛОС ===== */
+
 let rec, chunks=[], blob;
+
+recBtn.onmousedown = startRec;
+recBtn.onmouseup = stopRec;
 
 async function startRec(){
     const stream = await navigator.mediaDevices.getUserMedia({audio:true});
     rec = new MediaRecorder(stream);
     chunks=[];
 
-    document.getElementById('voice-panel').style.display='block';
-
     rec.start();
-    rec.ondataavailable=e=>chunks.push(e.data);
+
+    rec.ondataavailable = e => chunks.push(e.data);
+
+    document.getElementById("voice-panel").style.display = "block";
 }
 
 function stopRec(){
+    if(!rec) return;
     rec.stop();
-    rec.onstop=()=>{
+
+    rec.onstop = ()=>{
         blob = new Blob(chunks,{type:'audio/ogg'});
-        const url = URL.createObjectURL(blob);
-
-        const prev = document.getElementById('v-preview');
-        prev.src=url;
-        prev.style.display='block';
-
-        document.getElementById('v-send').style.display='inline';
-
-        rec.stream.getTracks().forEach(t=>t.stop());
+        preview.src = URL.createObjectURL(blob);
     }
 }
 
-function cancelRec(){
-    document.getElementById('voice-panel').style.display='none';
-    chunks=[];
-}
-
 async function sendVoice(){
-    const file = 'voice_'+Date.now()+'.ogg';
+    const name = 'voice_'+Date.now()+'.ogg';
 
-    await sb.storage.from('voices').upload(file, blob);
+    await sb.storage.from('voices').upload(name, blob);
 
-    const { data } = sb.storage.from('voices').getPublicUrl(file);
+    const { data } = sb.storage.from('voices').getPublicUrl(name);
 
-    await sb.from('messages').insert([
-        { user_id:user, type:'voice', voice:data.publicUrl }
-    ]);
+    await sb.from('messages').insert([{
+        user_id:userData.name,
+        type:'voice',
+        voice:data.publicUrl
+    }]);
 
-    cancelRec();
-    loadMsgs();
+    document.getElementById("voice-panel").style.display = "none";
 }
-</script>
-
-</body>
-</html>  
+</script></body>
+</html>
