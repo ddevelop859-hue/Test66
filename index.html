@@ -231,9 +231,9 @@ async function sendVoice(){
     if(!blob) return;
     const wave = await createMiniWave(blob);
     const name='voice_'+Date.now()+'.ogg';
-    const { error } = await sb.storage.from('voices').upload(name, blob, {upsert:true});
+    const { error } = await sb.storage.from('uploads').upload(name, blob, {upsert:true});
     if(error){alert("Ошибка загрузки голоса: "+error.message); return;}
-    const { data } = sb.storage.from('voices').getPublicUrl(name);
+    const { data } = sb.storage.from('uploads').getPublicUrl(name);
     const url = data.publicUrl;
     await sb.from('messages').insert([{user_id:userData.name,type:'voice',voice:url,wave:wave}]);
 }
