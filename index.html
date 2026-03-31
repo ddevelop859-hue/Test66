@@ -313,16 +313,20 @@ async function sendVoice(){
     const wave = await createMiniWave(blob);
     const name = 'voice_'+Date.now()+'.ogg';
     await sb.storage.from('voices').upload(name, blob, {upsert:true});
-    const url = sb.storage.from('voices').getPublicUrl(name).publicUrl;
+    const { data: fileData } = sb.storage.from('voices').getPublicUrl(name);
+    const url = fileData.publicUrl;
+
     const { data } = await sb.from('messages').insert([{
         user_id:userData.name,
         type:'voice',
         voice: url,
         wave: wave
     }]).select();
+
     document.getElementById("voice-panel").style.display = "none";
-    render(data[0]);
     blob=null;
+
+    render(data[0]);
 }
 </script>
 
