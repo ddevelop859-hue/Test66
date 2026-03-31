@@ -73,12 +73,11 @@ document.getElementById("toggleRadio").onclick = ()=>{
 
 // Рендер сообщений
 function render(msg){
-    if(chat.querySelector(`[data-id="${msg.id}"]`)) return; // нет дублирования
+    if(chat.querySelector(`[data-id="${msg.id}"]`)) return;
     let div = document.createElement("div");
     div.className = "msg" + (msg.user_id===userData.name?" me":"");
     div.dataset.id = msg.id;
 
-    // Шапка с три точки
     const headerDiv = document.createElement("div");
     headerDiv.className="msg-header";
     const dotsBtn = document.createElement("button");
@@ -96,12 +95,24 @@ function render(msg){
     if(msg.type==="voice"){
         const container=document.createElement("div");
         container.className="voice-msg";
+
+        // Исправлено: один Audio объект на сообщение
+        const audio = new Audio(msg.voice);
+        audio.preload = "auto";
+        audio.load();
+
         const playBtn=document.createElement("button");
         playBtn.innerText="▶";
-        const audio=new Audio(msg.voice);
         playBtn.onclick=()=>{
-            if(audio.paused){audio.play(); playBtn.innerText="⏸";} else {audio.pause(); playBtn.innerText="▶";}
+            if(audio.paused){
+                audio.play().catch(e=>console.log("Ошибка воспроизведения:", e));
+                playBtn.innerText="⏸";
+            } else {
+                audio.pause();
+                playBtn.innerText="▶";
+            }
         }
+
         const waveDiv=document.createElement("div");
         waveDiv.className="voice-wave";
         if(msg.wave) msg.wave.forEach(h=>{
@@ -110,6 +121,7 @@ function render(msg){
             bar.style.height=(h*30)+"px";
             waveDiv.appendChild(bar);
         });
+
         container.appendChild(playBtn);
         container.appendChild(waveDiv);
         div.appendChild(container);
@@ -214,12 +226,10 @@ async function sendVoice(){
     if(!blob) return;
     const wave = await createMiniWave(blob);
     const name='voice_'+Date.now()+'.ogg';
-    // Загрузка в storage
     const { error } = await sb.storage.from('voices').upload(name, blob, {upsert:true});
     if(error){alert("Ошибка загрузки голоса: "+error.message); return;}
     const { data } = sb.storage.from('voices').getPublicUrl(name);
     const url = data.publicUrl;
-    // Отправка сообщения
     await sb.from('messages').insert([{user_id:userData.name,type:'voice',voice:url,wave:wave}]);
     document.getElementById("voice-panel").style.display="none";
     blob=null;
