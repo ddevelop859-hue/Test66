@@ -31,9 +31,9 @@ canvas#recordWave {width:100%;height:60px;background:#111;border-radius:10px;}
 <header>
     <div style="display:flex; align-items:center; gap:10px;">
         <span>Tanson</span>
-        <button id="toggleRadio" style="padding:5px 10px; border-radius:10px;">▶ Радио</button>
+        <button id="toggleRadio" style="padding:5px 10px; border-radius:10px;">▶ Европа Plus</button>
     </div>
-    <audio id="radioPlayer" src="https://europaplus.rastream.com/europaplus128.mp3" type="audio/mpeg" autoplay loop></audio>
+    <audio id="radioPlayer" src="https://online-radio.eu/radio/39938-europa-plus" type="audio/mpeg" autoplay loop></audio>
 </header>
 
 <div id="chat"></div>
@@ -65,7 +65,7 @@ const chat = document.getElementById("chat");
 const contextMenu = document.getElementById("contextMenu");
 let selectedMsg = null;
 
-// Радио
+// Радио кнопка
 const radioPlayer = document.getElementById("radioPlayer");
 document.getElementById("toggleRadio").onclick = ()=>{
     if(radioPlayer.paused) radioPlayer.play(); else radioPlayer.pause();
@@ -95,13 +95,13 @@ function render(msg){
     if(msg.type==="voice"){
         const container=document.createElement("div");
         container.className="voice-msg";
-        const audio = new Audio(msg.voice);
+        const audio=new Audio(msg.voice);
         audio.preload="auto"; audio.load();
 
         const playBtn=document.createElement("button");
         playBtn.innerText="▶";
         playBtn.onclick=()=>{
-            if(audio.paused){audio.play().catch(e=>console.log(e)); playBtn.innerText="⏸";} 
+            if(audio.paused){audio.play().catch(e=>console.log(e)); playBtn.innerText="⏸";}
             else {audio.pause(); playBtn.innerText="▶";}
         }
 
@@ -127,7 +127,7 @@ function render(msg){
     chat.scrollTop=chat.scrollHeight;
 }
 
-// Загрузка старых сообщений
+// Загрузка старых
 async function load(){
     const { data } = await sb.from("messages").select("*").order("id",{ascending:true});
     chat.innerHTML="";
@@ -135,49 +135,48 @@ async function load(){
 }
 load();
 
-// Подписка на новые
+// Подписка
 sb.channel('chat').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},payload=>{
     render(payload.new);
 }).subscribe();
 
-// Текстовые сообщения
+// Отправка текста
 document.getElementById("sendTextBtn").onclick = async ()=>{
-    let text = document.getElementById("msg").value;
+    let text=document.getElementById("msg").value;
     if(!text) return;
     await sb.from("messages").insert([{user_id:userData.name,text:text,type:"text"}]);
     document.getElementById("msg").value="";
 }
 
-// Голосовые
+// ГОЛОСОВЫЕ
 let rec, chunks=[], blob, recStream;
 let audioCtx, analyser, dataArray, source, rafId;
 const recBtn=document.getElementById("recBtn");
 const canvas=document.getElementById("recordWave");
 const ctx=canvas.getContext("2d");
 
+// Начало записи
 recBtn.addEventListener('mousedown',startRec);
 recBtn.addEventListener('touchstart',startRec);
 
 async function startRec(){
     recStream = await navigator.mediaDevices.getUserMedia({audio:true});
     rec = new MediaRecorder(recStream);
-    chunks=[];
-    rec.start();
+    chunks=[]; rec.start();
 
-    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    source = audioCtx.createMediaStreamSource(recStream);
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    analyser=audioCtx.createAnalyser();
+    source=audioCtx.createMediaStreamSource(recStream);
     source.connect(analyser);
-    analyser.fftSize = 256;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-    drawWave();
-    document.getElementById("voice-panel").style.display = "block";
+    analyser.fftSize=256;
+    dataArray=new Uint8Array(analyser.frequencyBinCount);
+    drawWave(); document.getElementById("voice-panel").style.display="block";
 
-    rec.ondataavailable = e => chunks.push(e.data);
+    rec.ondataavailable=e=>chunks.push(e.data);
 }
 
 function drawWave(){
-    rafId = requestAnimationFrame(drawWave);
+    rafId=requestAnimationFrame(drawWave);
     analyser.getByteTimeDomainData(dataArray);
     ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.lineWidth=2; ctx.strokeStyle='#2a6df5'; ctx.beginPath();
@@ -196,11 +195,8 @@ function stopRec(finalize=false){
     if(recStream) recStream.getTracks().forEach(t=>t.stop());
     cancelAnimationFrame(rafId);
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    rec.onstop = async () => {
-        if(finalize){
-            blob = new Blob(chunks,{type:'audio/ogg'});
-            await sendVoice();
-        } else { blob = null; }
+    rec.onstop = async ()=>{
+        if(finalize){ blob=new Blob(chunks,{type:'audio/ogg'}); await sendVoice();}
         document.getElementById("voice-panel").style.display="none";
         rec=null; recStream=null; chunks=[];
     };
@@ -209,7 +205,7 @@ function stopRec(finalize=false){
 document.getElementById("cancelVoice").onclick = ()=>stopRec(false);
 document.getElementById("sendVoiceBtn").onclick = ()=>stopRec(true);
 
-// Создание мини волны
+// мини‑волна
 function createMiniWave(blob){
     return new Promise(resolve=>{
         const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -230,7 +226,7 @@ function createMiniWave(blob){
     });
 }
 
-// Отправка голосового
+// отправка голосового
 async function sendVoice(){
     if(!blob) return;
     const wave = await createMiniWave(blob);
@@ -242,7 +238,7 @@ async function sendVoice(){
     await sb.from('messages').insert([{user_id:userData.name,type:'voice',voice:url,wave:wave}]);
 }
 
-// Контекстное меню удаления
+// удаление
 document.getElementById("deleteSelf").onclick=()=>{
     if(selectedMsg){selectedMsg.div.remove(); selectedMsg=null; contextMenu.style.display="none";}
 }
