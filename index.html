@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Telegram Voice Chat Upgrade</title>
+<title>Tanson Chat</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <style>
 body {
@@ -14,6 +14,15 @@ body {
     display:flex;
     flex-direction:column;
     height:100vh;
+}
+header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 15px;
+    background:#111;
+    font-size:20px;
+    font-weight:bold;
 }
 #chat {
     flex:1;
@@ -101,6 +110,16 @@ audio {
 </style>
 </head>
 <body>
+
+<header>
+    <div>Tanson</div>
+    <div>
+        <audio controls autoplay loop>
+            <source src="https://europaplus.rastream.com/europaplus128.mp3" type="audio/mpeg">
+            Ваш браузер не поддерживает потоковое радио
+        </audio>
+    </div>
+</header>
 
 <div id="chat"></div>
 
@@ -216,14 +235,12 @@ async function startRec(){
     chunks = [];
     rec.start();
 
-    // Визуализация в реальном времени
     audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
     source = audioCtx.createMediaStreamSource(stream);
     source.connect(analyser);
     analyser.fftSize = 256;
-    const bufferLength = analyser.frequencyBinCount;
-    dataArray = new Uint8Array(bufferLength);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
 
     drawWave();
     document.getElementById("voice-panel").style.display = "block";
@@ -263,14 +280,10 @@ function stopRec(){
 
     rec.onstop = ()=>{
         blob = new Blob(chunks,{type:'audio/ogg'});
-        const preview = document.createElement('audio');
-        preview.src = URL.createObjectURL(blob);
-        preview.controls = true;
-        document.getElementById("recordWave").after(preview);
     }
 }
 
-// Создание мини-волны для отправленного сообщения
+// Создание мини-волны
 function createMiniWave(blob){
     return new Promise(resolve=>{
         const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
@@ -296,9 +309,10 @@ function createMiniWave(blob){
 
 // Отправка голоса
 async function sendVoice(){
+    if(!blob) return;
     const wave = await createMiniWave(blob);
     const name = 'voice_'+Date.now()+'.ogg';
-    await sb.storage.from('voices').upload(name, blob);
+    await sb.storage.from('voices').upload(name, blob, {upsert:true});
     const url = sb.storage.from('voices').getPublicUrl(name).publicUrl;
     const { data } = await sb.from('messages').insert([{
         user_id:userData.name,
@@ -308,6 +322,7 @@ async function sendVoice(){
     }]).select();
     document.getElementById("voice-panel").style.display = "none";
     render(data[0]);
+    blob=null;
 }
 </script>
 
