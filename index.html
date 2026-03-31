@@ -40,13 +40,13 @@ canvas#recordWave {width:100%;height:60px;background:#111;border-radius:10px;}
 
 <div id="voice-panel">
     <canvas id="recordWave"></canvas><br>
-    <button onclick="cancelVoice()">✖</button>
-    <button onclick="sendVoice()">✔</button>
+    <button id="cancelVoice">✖</button>
+    <button id="sendVoiceBtn">✔</button>
 </div>
 
 <div class="bottom">
     <input id="msg" placeholder="Сообщение...">
-    <button onclick="sendMsg()">➤</button>
+    <button id="sendTextBtn">➤</button>
     <button id="recBtn">🎤</button>
 </div>
 
@@ -141,43 +141,43 @@ sb.channel('chat').on('postgres_changes',{event:'INSERT',schema:'public',table:'
 }).subscribe();
 
 // Текстовые сообщения
-async function sendMsg(){
-    let text = msg.value;
+document.getElementById("sendTextBtn").onclick = async ()=>{
+    let text = document.getElementById("msg").value;
     if(!text) return;
     await sb.from("messages").insert([{user_id:userData.name,text:text,type:"text"}]);
-    msg.value="";
+    document.getElementById("msg").value="";
 }
 
 // Голосовые
-let rec, chunks=[], blob;
+let rec, chunks=[], blob, recStream;
 let audioCtx, analyser, dataArray, source, rafId;
 const recBtn=document.getElementById("recBtn");
 const canvas=document.getElementById("recordWave");
 const ctx=canvas.getContext("2d");
 
 recBtn.addEventListener('mousedown',startRec);
-recBtn.addEventListener('mouseup',stopRec);
 recBtn.addEventListener('touchstart',startRec);
-recBtn.addEventListener('touchend',stopRec);
 
 async function startRec(){
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    rec = new MediaRecorder(stream);
+    recStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    rec = new MediaRecorder(recStream);
     chunks=[];
     rec.start();
+
     audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
-    source = audioCtx.createMediaStreamSource(stream);
+    source = audioCtx.createMediaStreamSource(recStream);
     source.connect(analyser);
-    analyser.fftSize=256;
-    dataArray=new Uint8Array(analyser.frequencyBinCount);
+    analyser.fftSize = 256;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
     drawWave();
-    document.getElementById("voice-panel").style.display="block";
-    rec.ondataavailable=e=>chunks.push(e.data);
+    document.getElementById("voice-panel").style.display = "block";
+
+    rec.ondataavailable = e => chunks.push(e.data);
 }
 
 function drawWave(){
-    rafId=requestAnimationFrame(drawWave);
+    rafId = requestAnimationFrame(drawWave);
     analyser.getByteTimeDomainData(dataArray);
     ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.lineWidth=2; ctx.strokeStyle='#2a6df5'; ctx.beginPath();
@@ -190,18 +190,24 @@ function drawWave(){
     ctx.lineTo(canvas.width,canvas.height/2); ctx.stroke();
 }
 
-function stopRec(){
+function stopRec(finalize=false){
     if(!rec) return;
     rec.stop();
+    if(recStream) recStream.getTracks().forEach(t=>t.stop());
     cancelAnimationFrame(rafId);
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    rec.onstop=()=>{blob=new Blob(chunks,{type:'audio/ogg'});}
+    rec.onstop = async () => {
+        if(finalize){
+            blob = new Blob(chunks,{type:'audio/ogg'});
+            await sendVoice();
+        } else { blob = null; }
+        document.getElementById("voice-panel").style.display="none";
+        rec=null; recStream=null; chunks=[];
+    };
 }
 
-function cancelVoice(){
-    blob=null;
-    document.getElementById("voice-panel").style.display="none";
-}
+document.getElementById("cancelVoice").onclick = ()=>stopRec(false);
+document.getElementById("sendVoiceBtn").onclick = ()=>stopRec(true);
 
 // Создание мини волны
 function createMiniWave(blob){
@@ -234,8 +240,6 @@ async function sendVoice(){
     const { data } = sb.storage.from('voices').getPublicUrl(name);
     const url = data.publicUrl;
     await sb.from('messages').insert([{user_id:userData.name,type:'voice',voice:url,wave:wave}]);
-    document.getElementById("voice-panel").style.display="none";
-    blob=null;
 }
 
 // Контекстное меню удаления
