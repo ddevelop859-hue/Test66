@@ -5,56 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tanson Platinum</title>
     <style>
-        :root { --neon: #00ffe1; --pink: #ff00ff; --gold: #c69c6d; --bg: #050510; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; }
+        :root { --neon: #00ffe1; --pink: #ff00ff; --gold: #c69c6d; --bg: #050510; --card: rgba(255,255,255,0.03); }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; height: 100vh; overflow: hidden; }
         
-        /* 1. ЗАСТАВКА (ПРИГЛУШЕННЫЙ ЛЕВ) */
-        #splash { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.8s; }
-        #splash img { width: 140px; opacity: 0.5; filter: grayscale(0.3) drop-shadow(0 0 15px rgba(198, 156, 109, 0.2)); }
-        .loader-bar { width: 180px; height: 2px; background: #111; margin-top: 30px; border-radius: 2px; overflow: hidden; }
-        .loader-fill { width: 0%; height: 100%; background: var(--gold); animation: load 3s forwards; }
+        /* ЗАСТАВКА (ЭФФЕКТНЫЙ ЛЕВ) */
+        #splash { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s; }
+        #splash img { width: 140px; opacity: 0.45; filter: drop-shadow(0 0 20px rgba(198, 156, 109, 0.15)); animation: breathe 3s infinite ease-in-out; }
+        .loader-bar { width: 180px; height: 2px; background: #111; margin-top: 35px; border-radius: 4px; overflow: hidden; }
+        .loader-fill { width: 0%; height: 100%; background: linear-gradient(90deg, transparent, var(--gold), transparent); animation: load 3s forwards ease-in-out; }
         @keyframes load { to { width: 100%; } }
+        @keyframes breathe { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.03); } }
 
-        /* ОСНОВНОЙ ПЛЕЕР ПРИЛОЖЕНИЯ */
-        #main-app { display: none; height: 100vh; flex-direction: column; position: relative; }
-        
-        .header { background: #000; padding: 12px 15px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        .header b { letter-spacing: 2px; color: var(--neon); }
+        /* ОСНОВНОЙ ПРИЛОЖЕНИЕ */
+        #main-app { display: none; height: 100vh; flex-direction: column; }
+        .header { background: #000; padding: 12px 18px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        .header b { color: var(--neon); letter-spacing: 1.5px; text-transform: uppercase; font-size: 14px; }
 
-        /* ЭКРАНЫ */
-        .screen { display: none; flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .screen { display: none; flex: 1; overflow-y: auto; padding-bottom: 90px; }
         .screen.active { display: flex; flex-direction: column; }
 
-        /* ОКНО ЧАТА */
-        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
-        .msg { padding: 12px; border-radius: 18px; max-width: 80%; background: #0a0a1a; border: 1px solid #1a1a2a; }
-        .me { align-self: flex-end; border-color: var(--neon); background: rgba(0,255,225,0.05); }
+        /* ЧАТ И СООБЩЕНИЯ */
+        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 14px; }
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 78%; background: #0d0d1a; border: 1px solid #1a1a2a; line-height: 1.4; }
+        .me { align-self: flex-end; border-color: var(--neon); background: rgba(0,255,225,0.04); }
+        .msg-user { font-size: 10px; color: var(--neon); margin-bottom: 4px; font-weight: bold; opacity: 0.8; }
 
-        /* ПАНЕЛЬ ВВОДА (ВЫШЕ НАВИГАЦИИ) */
-        .input-area { position: fixed; bottom: 70px; left: 0; right: 0; background: #000; padding: 10px; border-top: 1px solid #111; display: flex; gap: 10px; align-items: center; z-index: 900; }
-        #m-inp { flex: 1; background: #111; border: 1px solid #222; color: #fff; padding: 12px 15px; border-radius: 25px; outline: none; }
+        /* ВВОД (ПОДНЯТ НАД МЕНЮ) */
+        .input-area { position: fixed; bottom: 70px; left: 0; right: 0; background: #000; padding: 12px; border-top: 1px solid #111; display: flex; gap: 10px; align-items: center; z-index: 900; }
+        #m-inp { flex: 1; background: #0f0f1a; border: 1px solid #222; color: #fff; padding: 12px 18px; border-radius: 25px; outline: none; transition: border 0.3s; }
+        #m-inp:focus { border-color: var(--neon); }
 
-        /* НИЖНЯЯ НАВИГАЦИЯ (ЖЕСТКО ЗАКРЕПЛЕНА) */
+        /* НАВИГАЦИЯ (НИЖНЯЯ) */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 70px; background: #000; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
-        .nav-btn { background: none; border: none; color: #444; display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 5px; cursor: pointer; }
+        .nav-btn { background: none; border: none; color: #444; display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 6px; cursor: pointer; transition: 0.3s; }
         .nav-btn.active { color: var(--neon); }
         .nav-btn i { font-size: 22px; font-style: normal; }
 
-        /* КНОПКИ */
-        .circle-send { width: 45px; height: 45px; border-radius: 50%; background: var(--neon); border: none; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .radio-active { animation: glow 2s infinite; }
-        @keyframes glow { 50% { text-shadow: 0 0 10px var(--neon); } }
-
         /* ПРОФИЛЬ */
-        .prof-card { text-align: center; padding: 40px 20px; }
-        .avatar { width: 100px; height: 100px; border-radius: 50%; background: #111; border: 2px solid var(--neon); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-        .prof-btn { display: block; width: 100%; max-width: 280px; margin: 10px auto; padding: 14px; border-radius: 12px; border: 1px solid #222; background: none; color: #fff; text-decoration: none; }
+        .prof-box { text-align: center; padding: 40px 20px; }
+        .avatar-main { width: 110px; height: 110px; border-radius: 50%; background: #000; border: 3px solid var(--neon); margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; font-size: 45px; box-shadow: 0 0 20px rgba(0,255,225,0.1); }
+        .p-btn { display: block; width: 100%; max-width: 300px; margin: 12px auto; padding: 15px; border-radius: 12px; border: 1px solid #222; background: none; color: #fff; text-decoration: none; font-size: 14px; }
+        
+        .radio-pulse { color: var(--neon) !important; animation: r-pulse 2s infinite; }
+        @keyframes r-pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div id="splash">
-    <img src="https://img.icons8.com/ios-filled/150/c69c6d/lion.png" alt="Lion">
+    <img src="https://img.icons8.com/ios-filled/200/c69c6d/lion.png" alt="Tanson Lion">
     <div class="loader-bar"><div class="loader-fill"></div></div>
 </div>
 
@@ -63,96 +62,97 @@
         <div class="header">
             <div style="display:flex; align-items:center; gap:12px;">
                 <b>TANSON</b>
-                <button onclick="toggleRadio()" id="r-btn" style="background:none; border:none; font-size:20px; cursor:pointer;">📻</button>
+                <button onclick="toggleRadio()" id="rad-btn" style="background:none; border:none; font-size:20px; cursor:pointer; color:#555; transition: 0.3s;">📻</button>
             </div>
-            <button onclick="openSett()" style="background:none; border:none; color:#555; font-size:22px;">⚙️</button>
+            <button onclick="openSett()" style="background:none; border:none; color:#444; font-size:22px;">⚙️</button>
         </div>
         
         <div style="padding:15px;">
-            <div onclick="openChat('Общий Чат')" style="background:rgba(255,255,255,0.03); padding:20px; border-radius:15px; border:1px solid #111; display:flex; align-items:center; gap:15px;">
-                <span style="font-size:24px;">🌍</span>
+            <div onclick="openChat('Общий Чат')" style="background:var(--card); padding:22px; border-radius:20px; border:1px solid #151525; display:flex; align-items:center; gap:18px;">
+                <span style="font-size:26px;">🌍</span>
                 <div>
                     <b style="font-size:16px;">Общий Чат</b><br>
-                    <small style="color:#555;">Тут все свои</small>
+                    <small style="color:#555;">Официальный канал связи</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="scr-friends" class="screen">
+    <div id="scr-contacts" class="screen">
         <div class="header"><b>Контакты</b></div>
-        <div style="padding:40px; text-align:center; color:#333;">Список контактов пуст</div>
+        <div style="padding:50px 20px; text-align:center; color:#333; font-size:14px;">Пока здесь никого нет...</div>
     </div>
 
     <div id="scr-profile" class="screen">
         <div class="header"><b>Профиль</b></div>
-        <div class="prof-card">
-            <div class="avatar">👤</div>
-            <h2 id="u-name" style="margin-bottom:30px;">Serega</h2>
-            <button class="prof-btn" style="background:var(--neon); color:#000; border:none; font-weight:bold;">Регистрация</button>
-            <a href="mailto:ddevelop859@gmail.com" class="prof-btn">Написать разработчику</a>
-            <button class="prof-btn" style="background:#fff; color:#000; font-weight:bold;">Войти через Google</button>
+        <div class="prof-box">
+            <div class="avatar-main">👤</div>
+            <h2 id="u-display" style="margin:0 0 35px 0; font-weight: 300;">Serega</h2>
+            <button class="p-btn" style="background:var(--neon); color:#000; border:none; font-weight:bold;">Регистрация аккаунта</button>
+            <a href="mailto:ddevelop859@gmail.com" class="p-btn">Написать разработчику</a>
+            <button class="p-btn" style="background:#fff; color:#000; border:none; font-weight:bold;">Войти через Google</button>
         </div>
     </div>
 
     <div class="nav-bar">
         <button class="nav-btn active" onclick="switchTab('scr-chats', this)"><i>💬</i>Чаты</button>
-        <button class="nav-btn" onclick="switchTab('scr-friends', this)"><i>👥</i>Друзья</button>
+        <button class="nav-btn" onclick="switchTab('scr-contacts', this)"><i>👥</i>Друзья</button>
         <button class="nav-btn" onclick="switchTab('scr-profile', this)"><i>👤</i>Профиль</button>
     </div>
 </div>
 
 <div id="chat-page" style="position:fixed; inset:0; background:var(--bg); z-index:2000; display:none; flex-direction:column;">
     <div class="header">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <button onclick="closeChat()" style="background:none; border:none; color:var(--neon); font-size:24px;">←</button>
-            <b id="c-title" style="color:#fff">Чат</b>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <button onclick="closeChat()" style="background:none; border:none; color:var(--neon); font-size:26px; cursor:pointer;">←</button>
+            <b id="chat-name" style="color:#fff">Чат</b>
         </div>
-        <div style="font-size:10px; color:#0f0;">онлайн</div>
+        <div style="font-size:10px; color:#0f0; background:rgba(0,255,0,0.1); padding:2px 8px; border-radius:10px;">online</div>
     </div>
     
     <div id="chat-window"></div>
     
     <div class="input-area">
-        <button style="background:none; border:none; font-size:22px;">📎</button>
-        <button style="background:none; border:none; font-size:22px;">🎤</button>
-        <input id="m-inp" placeholder="Сообщение...">
-        <button onclick="sendMsg()" class="circle-send">➤</button>
+        <button style="background:none; border:none; font-size:24px; color:#555;">📎</button>
+        <button style="background:none; border:none; font-size:24px; color:#555;">🎤</button>
+        <input id="m-inp" placeholder="Ваше сообщение...">
+        <button onclick="sendMsg()" style="background:var(--neon); border:none; width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">➤</button>
     </div>
 </div>
 
-<div id="sett-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
-    <div style="background:#0a0a15; padding:25px; border-radius:20px; border:1px solid var(--neon); width:80%;">
-        <h3 style="color:var(--neon); margin-top:0;">Настройки</h3>
-        <div style="margin-bottom:15px;">Статус: <span style="color:var(--neon)">в сети</span></div>
-        <div style="margin-bottom:15px;">Черный список</div>
-        <div style="margin-bottom:25px; color:var(--pink)">Секретный режим</div>
-        <button onclick="localStorage.clear(); location.reload();" style="width:100%; padding:12px; background:#ff0055; border:none; border-radius:10px; color:#fff; font-weight:bold;">Выход</button>
-        <button onclick="closeSett()" style="width:100%; padding:10px; margin-top:10px; background:none; border:none; color:#555;">Закрыть</button>
+<div id="sett-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:3000; align-items:center; justify-content:center; backdrop-filter: blur(8px);">
+    <div style="background:#0a0a15; padding:30px; border-radius:25px; border:1px solid #1a1a2a; width:80%; max-width:320px;">
+        <h3 style="color:var(--neon); margin:0 0 20px 0; font-weight: 300;">Настройки</h3>
+        <div style="margin-bottom:18px; font-size:14px; display:flex; justify-content:space-between;">Статус: <span style="color:var(--neon)">в сети</span></div>
+        <div style="margin-bottom:18px; font-size:14px; opacity:0.6;">Черный список</div>
+        <div style="margin-bottom:30px; font-size:14px; color:var(--pink)">Секретный режим</div>
+        <button onclick="localStorage.clear(); location.reload();" style="width:100%; padding:15px; background:#ff0055; border:none; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer;">Выход из аккаунта</button>
+        <button onclick="closeSett()" style="width:100%; padding:10px; margin-top:15px; background:none; border:none; color:#444; font-size:12px;">ЗАКРЫТЬ</button>
     </div>
 </div>
 
-<audio id="radio" src="https://europaplus.hostingradio.ru:8014/ep128.mp3"></audio>
+<audio id="radio-p" src="https://europaplus.hostingradio.ru:8014/ep128.mp3"></audio>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // ТВОИ КОНФИГИ (НЕ ТРОГАЛ)
     const S_URL = 'https://yialdvgdpuazzedpxozc.supabase.co';
     const S_KEY = 'sb_publishable_obvuV6Of_iUSWBy6phzv5w_eSQl0YYt'; 
     const sb = supabase.createClient(S_URL, S_KEY);
 
     let user = localStorage.getItem("tanson_user") || "Serega";
-    document.getElementById('u-name').innerText = user;
+    document.getElementById('u-display').innerText = user;
 
-    // ЗАПУСК ПРИЛОЖЕНИЯ ПОСЛЕ ЛЬВА
+    // ЛОГИКА ЗАПУСКА
     window.onload = () => {
         setTimeout(() => {
-            const sp = document.getElementById('splash');
-            sp.style.opacity = '0';
+            const splash = document.getElementById('splash');
+            splash.style.opacity = '0';
             setTimeout(() => {
-                sp.style.display = 'none';
+                splash.style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
             }, 800);
-        }, 3000);
+        }, 3000); // 3 секунды льва
     };
 
     function switchTab(id, btn) {
@@ -164,7 +164,7 @@
 
     function openChat(name) {
         document.getElementById('chat-page').style.display = 'flex';
-        document.getElementById('c-title').innerText = name;
+        document.getElementById('chat-name').innerText = name;
         loadMsgs();
     }
     function closeChat() { document.getElementById('chat-page').style.display = 'none'; }
@@ -173,21 +173,22 @@
     function closeSett() { document.getElementById('sett-modal').style.display = 'none'; }
 
     function toggleRadio() {
-        const r = document.getElementById('radio');
-        const b = document.getElementById('r-btn');
-        if(r.paused) { r.play(); b.classList.add('radio-active'); }
-        else { r.pause(); b.classList.remove('radio-active'); }
+        const p = document.getElementById('radio-p');
+        const b = document.getElementById('rad-btn');
+        if(p.paused) { p.play(); b.classList.add('radio-pulse'); }
+        else { p.pause(); b.classList.remove('radio-pulse'); }
     }
 
-    // ЛОГИКА СООБЩЕНИЙ (ТВОЯ БАЗА)
+    // ЛОГИКА ЧАТА (SUPABASE)
     async function loadMsgs() {
         const { data } = await sb.from('messages').select('*').order('created_at', {ascending:true});
         const win = document.getElementById('chat-window');
         win.innerHTML = '';
         if(data) data.forEach(m => {
+            const isMe = m.user_id === user;
             const div = document.createElement('div');
-            div.className = `msg ${m.user_id === user ? 'me' : ''}`;
-            div.innerHTML = `<small style="color:var(--neon); font-size:9px;">${m.user_id}</small><br>${m.text || ''}`;
+            div.className = `msg ${isMe ? 'me' : ''}`;
+            div.innerHTML = `<div class="msg-user">${m.user_id}</div>${m.text || ''}`;
             win.appendChild(div);
         });
         win.scrollTop = win.scrollHeight;
@@ -196,8 +197,9 @@
     async function sendMsg() {
         const i = document.getElementById('m-inp');
         if(!i.value.trim()) return;
-        await sb.from('messages').insert([{ text: i.value, user_id: user, channel: 'global' }]);
+        const txt = i.value;
         i.value = '';
+        await sb.from('messages').insert([{ text: txt, user_id: user, channel: 'global' }]);
         loadMsgs();
     }
 </script>
