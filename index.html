@@ -1,59 +1,55 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tanson Platinum Build</title>
+    <title>Tanson Platinum Fixed</title>
     <style>
-        :root { --neon: #00ffe1; --pink: #ff00ff; --gold: #c69c6d; --bg: #050510; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; height: 100vh; overflow: hidden; }
+        :root { --neon: #00ffe1; --gold: #c69c6d; --bg: #050510; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; }
 
-        /* ЛЕВ НА ЗАСТАВКЕ */
-        #splash { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.8s; }
+        /* ИСПРАВЛЕННЫЙ СПЛЭШ */
+        #splash { position: fixed; inset: 0; background: #000; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.6s ease; }
         #splash img { width: 130px; opacity: 0.5; filter: drop-shadow(0 0 15px var(--gold)); }
-        .loader { width: 160px; height: 2px; background: #111; margin-top: 30px; border-radius: 2px; overflow: hidden; }
-        .loader-fill { width: 0%; height: 100%; background: var(--gold); animation: load 3s forwards; }
+        .loader { width: 160px; height: 2px; background: #111; margin-top: 25px; border-radius: 2px; overflow: hidden; }
+        .loader-fill { width: 0%; height: 100%; background: var(--gold); animation: load-anim 3s forwards; }
+        @keyframes load-anim { to { width: 100%; } }
 
-        /* ОСНОВНОЙ КОНТЕЙНЕР */
         #main-app { display: none; height: 100vh; flex-direction: column; }
-        .header { background: #000; padding: 15px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-        .header b { color: var(--neon); letter-spacing: 1px; }
+        .header { background: #000; padding: 15px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; }
+        .header b { color: var(--neon); letter-spacing: 1px; font-size: 14px; }
 
         .screen { display: none; flex: 1; overflow-y: auto; padding-bottom: 80px; }
         .screen.active { display: flex; flex-direction: column; }
 
-        /* ЧАТ И ПРАВИЛЬНОЕ ОТОБРАЖЕНИЕ СООБЩЕНИЙ */
-        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; background: var(--bg); }
-        .msg { padding: 12px; border-radius: 18px; max-width: 80%; background: #0d0d1a; border: 1px solid #1a1a2a; position: relative; word-wrap: break-word; }
+        /* ЧАТ */
+        #chat-window { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+        .msg { padding: 12px; border-radius: 18px; max-width: 85%; background: #0d0d1a; border: 1px solid #1a1a2a; }
         .me { align-self: flex-end; border-color: var(--neon); background: rgba(0,255,225,0.03); }
-        .msg-u { font-size: 10px; color: var(--neon); margin-bottom: 4px; font-weight: bold; }
+        
+        /* МЕДИА */
+        video, audio { width: 100%; border-radius: 10px; margin-top: 8px; background: #000; }
 
-        /* МЕДИА-КОНТЕНТ */
-        video, audio { width: 100%; border-radius: 10px; margin-top: 5px; background: #000; }
-
-        /* ПАНЕЛЬ ВВОДА (ФИКСИРОВАННАЯ) */
-        .input-area { background: #000; padding: 10px 15px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #111; z-index: 900; }
-        #m-inp { flex: 1; background: #111; border: 1px solid #222; color: #fff; padding: 12px 18px; border-radius: 25px; outline: none; }
-        .btn-m { background: none; border: none; font-size: 24px; color: #444; cursor: pointer; }
+        /* ПАНЕЛЬ ВВОДА */
+        .input-area { background: #000; padding: 10px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #111; z-index: 1000; }
+        #m-inp { flex: 1; background: #111; border: 1px solid #222; color: #fff; padding: 12px 15px; border-radius: 25px; outline: none; }
+        .btn-act { background: none; border: none; font-size: 22px; color: #444; cursor: pointer; }
 
         /* НАВИГАЦИЯ */
         .nav-bar { height: 70px; background: #000; border-top: 1px solid #111; display: flex; justify-content: space-around; align-items: center; }
-        .nav-btn { background: none; border: none; color: #444; display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 4px; }
+        .nav-btn { background: none; border: none; color: #444; display: flex; flex-direction: column; align-items: center; font-size: 10px; }
         .nav-btn.active { color: var(--neon); }
-        .nav-btn span { font-size: 22px; }
+        .nav-btn span { font-size: 22px; margin-bottom: 3px; }
 
-        /* МОДАЛКА (НАСТРОЙКИ) */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-box { background: #0a0a15; padding: 25px; border-radius: 25px; border: 1px solid #1a1a2a; width: 85%; max-width: 300px; }
-
-        @keyframes load { to { width: 100%; } }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; }
+        .modal-box { background: #0a0a15; padding: 25px; border-radius: 20px; border: 1px solid #1a1a2a; width: 80%; }
     </style>
 </head>
 <body>
 
 <div id="splash">
-    <img src="https://img.icons8.com/ios-filled/200/c69c6d/lion.png" alt="Lion">
+    <img src="https://img.icons8.com/ios-filled/200/c69c6d/lion.png" alt="Logo">
     <div class="loader"><div class="loader-fill"></div></div>
 </div>
 
@@ -61,22 +57,21 @@
     <div id="scr-chats" class="screen active">
         <div class="header">
             <b>TANSON PLATINUM</b>
-            <button onclick="toggleSett(true)" style="background:none; border:none; font-size:20px;">⚙️</button>
+            <button onclick="showModal(true)" style="background:none; border:none; font-size:20px;">⚙️</button>
         </div>
         <div style="padding:15px;">
             <div onclick="openChat('Global Chat')" style="background:rgba(255,255,255,0.02); padding:20px; border-radius:18px; border:1px solid #1a1a2a; display:flex; align-items:center; gap:15px;">
-                <span style="font-size:26px;">🌍</span>
+                <span style="font-size:24px;">🌍</span>
                 <div><b>Общий Чат</b><br><small style="color:#555;">Serega, Tanya, Sonya</small></div>
             </div>
         </div>
     </div>
 
     <div id="scr-profile" class="screen">
-        <div class="header"><b>Мой Профиль</b></div>
-        <div style="text-align:center; padding:40px;">
-            <div style="width:100px; height:100px; border-radius:50%; border:2px solid var(--neon); margin:0 auto 20px; display:flex; align-items:center; justify-content:center; font-size:40px;">👤</div>
-            <h2 id="u-display">Seregasib</h2>
-            <p style="color:#555;">ID: 777-2026</p>
+        <div class="header"><b>Профиль</b></div>
+        <div style="text-align:center; padding:50px 20px;">
+            <div style="width:90px; height:90px; border-radius:50%; border:2px solid var(--neon); margin:0 auto 20px; display:flex; align-items:center; justify-content:center; font-size:35px;">👤</div>
+            <h2 id="u-name">Seregasib</h2>
         </div>
     </div>
 
@@ -86,52 +81,57 @@
     </div>
 </div>
 
-<div id="chat-page" style="position:fixed; inset:0; background:var(--bg); z-index:1500; display:none; flex-direction:column;">
+<div id="chat-page" style="position:fixed; inset:0; background:var(--bg); z-index:5000; display:none; flex-direction:column;">
     <div class="header">
         <button onclick="closeChat()" style="background:none; border:none; color:var(--neon); font-size:24px;">←</button>
         <b id="c-title">Чат</b>
         <div style="font-size:10px; color:#0f0;">online</div>
     </div>
-    
     <div id="chat-window"></div>
-    
     <div class="input-area">
-        <button class="btn-m" onclick="document.getElementById('f-in').click()">📎</button>
-        <button class="btn-m">🎤</button>
-        <input id="m-inp" placeholder="Сообщение...">
-        <button onclick="sendMsg()" style="background:var(--neon); border:none; width:44px; height:44px; border-radius:50%; font-size:18px; color:#000;">➤</button>
+        <button class="btn-act" onclick="document.getElementById('f-up').click()">📎</button>
+        <button class="btn-act">🎤</button>
+        <input id="m-inp" placeholder="Текст...">
+        <button onclick="sendMsg()" style="background:var(--neon); border:none; width:42px; height:42px; border-radius:50%; font-size:18px;">➤</button>
     </div>
 </div>
 
-<div id="sett-modal" class="modal" onclick="toggleSett(false)">
-    <div class="modal-box" onclick="event.stopPropagation()">
-        <h3 style="color:var(--neon); margin:0 0 20px 0;">Настройки</h3>
-        <div style="margin-bottom:15px; font-size:14px;">Статус: <span style="color:#0f0">в сети</span></div>
-        <div style="margin-bottom:15px; font-size:14px;">Секретный режим: <span style="color:var(--pink)">Выключено</span></div>
-        <button onclick="localStorage.clear(); location.reload();" style="width:100%; padding:12px; background:#ff0055; border:none; border-radius:12px; color:#fff; font-weight:bold;">Выход</button>
-        <button onclick="toggleSett(false)" style="width:100%; margin-top:10px; background:none; border:none; color:#555;">ЗАКРЫТЬ</button>
+<div id="sett-modal" class="modal">
+    <div class="modal-box">
+        <h3 style="color:var(--neon); margin-top:0;">Настройки</h3>
+        <p>Статус: <span style="color:#0f0">в сети</span></p>
+        <p style="color:var(--pink)">Секретный режим: <span>Off</span></p>
+        <button onclick="localStorage.clear(); location.reload();" style="width:100%; padding:12px; background:#ff0055; border:none; border-radius:10px; color:#fff; font-weight:bold;">Выход</button>
+        <button onclick="showModal(false)" style="width:100%; margin-top:12px; background:none; border:none; color:#555;">ЗАКРЫТЬ</button>
     </div>
 </div>
 
-<input type="file" id="f-in" style="display:none">
+<input type="file" id="f-up" style="display:none">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // ТВОИ КОНФИГИ (S_URL, S_KEY) - ОСТАВИЛ КАК БЫЛО
+    // ТВОИ ПАРАМЕТРЫ (НЕ ИЗМЕНЯТЬ)
     const S_URL = 'https://yialdvgdpuazzedpxozc.supabase.co';
     const S_KEY = 'sb_publishable_obvuV6Of_iUSWBy6phzv5w_eSQl0YYt';
-    const sb = supabase.createClient(S_URL, S_KEY);
+    let sb;
+
+    // Инициализация с защитой от ошибок
+    try {
+        sb = supabase.createClient(S_URL, S_KEY);
+    } catch(e) { console.error("Supabase Error:", e); }
+
     const user = "Seregasib";
 
-    // Сплеш
+    // ПРИНУДИТЕЛЬНЫЙ ВЫХОД ИЗ СПЛЭША
     window.onload = () => {
         setTimeout(() => {
-            document.getElementById('splash').style.opacity = '0';
+            const sp = document.getElementById('splash');
+            sp.style.opacity = '0';
             setTimeout(() => {
-                document.getElementById('splash').style.display = 'none';
+                sp.style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
-            }, 800);
-        }, 3000);
+            }, 600);
+        }, 3200); // 3.2 сек и сплэш уходит
     };
 
     function switchTab(id, btn) {
@@ -147,10 +147,11 @@
         loadMsgs();
     }
     function closeChat() { document.getElementById('chat-page').style.display = 'none'; }
-    function toggleSett(show) { document.getElementById('sett-modal').style.display = show ? 'flex' : 'none'; }
+    function showModal(show) { document.getElementById('sett-modal').style.display = show ? 'flex' : 'none'; }
 
     async function loadMsgs() {
-        const { data } = await sb.from('messages').select('*').order('created_at', {ascending:true});
+        if(!sb) return;
+        const { data, error } = await sb.from('messages').select('*').order('created_at', {ascending:true});
         const win = document.getElementById('chat-window');
         win.innerHTML = '';
         if(data) data.forEach(m => {
@@ -158,32 +159,23 @@
             const div = document.createElement('div');
             div.className = `msg ${isMe ? 'me' : ''}`;
             
-            let content = m.text || '';
-            // Проверка на медиа-ссылки (базовая)
-            if(content.endsWith('.mp4')) content = `<video controls src="${content}"></video>`;
-            if(content.endsWith('.mp3')) content = `<audio controls src="${content}"></audio>`;
+            let html = m.text || '';
+            if(html.includes('.mp4')) html = `<video controls src="${html}"></video>`;
+            if(html.includes('.mp3')) html = `<audio controls src="${html}"></audio>`;
 
-            div.innerHTML = `<div class="msg-u">${m.user_id}</div>${content}`;
+            div.innerHTML = `<div style="font-size:9px; color:var(--neon); margin-bottom:4px;">${m.user_id}</div>${html}`;
             win.appendChild(div);
         });
         win.scrollTop = win.scrollHeight;
     }
 
     async function sendMsg() {
-        const i = document.getElementById('m-inp');
-        if(!i.value.trim()) return;
-        const txt = i.value; i.value = '';
+        const inp = document.getElementById('m-inp');
+        if(!inp.value.trim() || !sb) return;
+        const txt = inp.value; inp.value = '';
         await sb.from('messages').insert([{ text: txt, user_id: user, channel: 'global' }]);
         loadMsgs();
     }
-
-    // Авто-прокрутка при вводе
-    document.getElementById('m-inp').addEventListener('focus', () => {
-        setTimeout(() => {
-            const win = document.getElementById('chat-window');
-            win.scrollTop = win.scrollHeight;
-        }, 300);
-    });
 </script>
 </body>
 </html>
