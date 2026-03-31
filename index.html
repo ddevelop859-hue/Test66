@@ -42,11 +42,25 @@ header {
     display:flex;
     flex-direction:column;
     gap:4px;
+    position:relative;
 }
 .me {
     background:#2a6df5;
     margin-left:auto;
     align-self:flex-end;
+}
+.delete-btn {
+    position:absolute;
+    top:2px;
+    right:5px;
+    background:red;
+    color:white;
+    border:none;
+    border-radius:50%;
+    width:20px;
+    height:20px;
+    font-size:12px;
+    cursor:pointer;
 }
 .bottom {
     display:flex;
@@ -104,9 +118,6 @@ canvas#recordWave {
     width:3px;
     background:#fff;
 }
-audio {
-    display:none;
-}
 </style>
 </head>
 <body>
@@ -148,6 +159,16 @@ function render(msg){
     let div = document.createElement("div");
     div.className = "msg" + (msg.user_id === userData.name ? " me":"");
 
+    // Кнопка удаления
+    const delBtn = document.createElement("button");
+    delBtn.className="delete-btn";
+    delBtn.innerText="x";
+    delBtn.onclick = async ()=>{
+        await sb.from('messages').delete().eq('id', msg.id);
+        div.remove();
+    }
+    div.appendChild(delBtn);
+
     if(msg.type === "voice"){
         const container = document.createElement("div");
         container.className = "voice-msg";
@@ -157,13 +178,7 @@ function render(msg){
         const audio = new Audio(msg.voice);
 
         playBtn.onclick = ()=>{
-            if(audio.paused){
-                audio.play();
-                playBtn.innerText="⏸";
-            } else {
-                audio.pause();
-                playBtn.innerText="▶";
-            }
+            audio.play();
         };
 
         const waveDiv = document.createElement("div");
@@ -181,7 +196,9 @@ function render(msg){
         container.appendChild(waveDiv);
         div.appendChild(container);
     } else {
-        div.innerText = msg.text;
+        const textDiv = document.createElement("div");
+        textDiv.innerText = msg.text;
+        div.appendChild(textDiv);
     }
 
     chat.appendChild(div);
