@@ -65,7 +65,7 @@ const chat = document.getElementById("chat");
 const contextMenu = document.getElementById("contextMenu");
 let selectedMsg = null;
 
-// Радио кнопка
+// Радио
 const radioPlayer = document.getElementById("radioPlayer");
 document.getElementById("toggleRadio").onclick = ()=>{
     if(radioPlayer.paused) radioPlayer.play(); else radioPlayer.pause();
@@ -73,11 +73,12 @@ document.getElementById("toggleRadio").onclick = ()=>{
 
 // Рендер сообщений
 function render(msg){
+    if(chat.querySelector(`[data-id="${msg.id}"]`)) return; // нет дублирования
     let div = document.createElement("div");
     div.className = "msg" + (msg.user_id===userData.name?" me":"");
     div.dataset.id = msg.id;
 
-    // Шапка с кнопкой "три точки"
+    // Шапка с три точки
     const headerDiv = document.createElement("div");
     headerDiv.className="msg-header";
     const dotsBtn = document.createElement("button");
@@ -93,15 +94,15 @@ function render(msg){
     div.appendChild(headerDiv);
 
     if(msg.type==="voice"){
-        const container = document.createElement("div");
+        const container=document.createElement("div");
         container.className="voice-msg";
-        const playBtn = document.createElement("button");
+        const playBtn=document.createElement("button");
         playBtn.innerText="▶";
-        const audio = new Audio(msg.voice);
-        playBtn.onclick = ()=>{
+        const audio=new Audio(msg.voice);
+        playBtn.onclick=()=>{
             if(audio.paused){audio.play(); playBtn.innerText="⏸";} else {audio.pause(); playBtn.innerText="▶";}
         }
-        const waveDiv = document.createElement("div");
+        const waveDiv=document.createElement("div");
         waveDiv.className="voice-wave";
         if(msg.wave) msg.wave.forEach(h=>{
             const bar=document.createElement("div");
@@ -213,29 +214,23 @@ async function sendVoice(){
     if(!blob) return;
     const wave = await createMiniWave(blob);
     const name='voice_'+Date.now()+'.ogg';
-    await sb.storage.from('voices').upload(name,blob,{upsert:true});
-    const {data:fileData} = sb.storage.from('voices').getPublicUrl(name);
-    const url=fileData.publicUrl;
+    // Загрузка в storage
+    const { error } = await sb.storage.from('voices').upload(name, blob, {upsert:true});
+    if(error){alert("Ошибка загрузки голоса: "+error.message); return;}
+    const { data } = sb.storage.from('voices').getPublicUrl(name);
+    const url = data.publicUrl;
+    // Отправка сообщения
     await sb.from('messages').insert([{user_id:userData.name,type:'voice',voice:url,wave:wave}]);
     document.getElementById("voice-panel").style.display="none";
     blob=null;
 }
 
-// Контекстное меню для удаления
+// Контекстное меню удаления
 document.getElementById("deleteSelf").onclick=()=>{
-    if(selectedMsg){
-        selectedMsg.div.remove();
-        selectedMsg=null;
-        contextMenu.style.display="none";
-    }
+    if(selectedMsg){selectedMsg.div.remove(); selectedMsg=null; contextMenu.style.display="none";}
 }
 document.getElementById("deleteAll").onclick=async()=>{
-    if(selectedMsg){
-        await sb.from('messages').delete().eq('id',selectedMsg.msg.id);
-        selectedMsg.div.remove();
-        selectedMsg=null;
-        contextMenu.style.display="none";
-    }
+    if(selectedMsg){await sb.from('messages').delete().eq('id',selectedMsg.msg.id); selectedMsg.div.remove(); selectedMsg=null; contextMenu.style.display="none";}
 }
 document.addEventListener("click",()=>{contextMenu.style.display="none";});
 </script>
