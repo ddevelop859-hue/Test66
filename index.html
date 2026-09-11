@@ -1,168 +1,235 @@
-// ==========================================
-// 1. ИНИЦИАЛИЗАЦИЯ И НАСТРОЙКИ POCKETBASE
-// ==========================================
-// Укажите хост вашей локальной или удаленной базы PocketBase
-const POCKETBASE_URL = 'http://127.0.0.1:8090';
-const pb = new PocketBase(POCKETBASE_URL);
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сайт Знакомств</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pocketbase/0.21.3/pocketbase.umd.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #ff4b6a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #e63956; }
+        .hidden { display: none; }
+        .profile-card { border-bottom: 1px solid #eee; padding: 15px 0; text-align: center; }
+        .nav { display: flex; justify-content: space-around; margin-bottom: 20px; }
+        .nav a { cursor: pointer; color: #ff4b6a; text-decoration: underline; }
+        .chat-list-item { border-bottom: 1px solid #eee; padding: 15px; cursor: pointer; }
+        .message-box { height: 300px; overflow-y: scroll; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; }
+        .message { margin-bottom: 10px; }
+        .message.sent { text-align: right; color: #ff4b6a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="nav" class="nav hidden">
+            <a onclick="showSection('profiles')">Анкеты</a>
+            <a onclick="showSection('chats')">Чаты</a>
+            <a onclick="logout()">Выход</a>
+        </div>
 
-// Отключаем авто-отмену запросов для стабильности
-pb.autoCancellation(false);
+        <!-- Авторизация -->
+        <section id="auth-section">
+            <h2>Вход</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Пароль">
+            <button onclick="login()">Войти</button>
+        </section>
 
-// ==========================================
-// 2. УПРАВЛЕНИЕ РАДИОПЛЕЕРОМ
-// ==========================================
-const audioPlayer = document.getElementById('audioPlayer');
-const statusText = document.getElementById('statusText');
+        <!-- Лента анкет -->
+        <section id="profiles-section" class="hidden">
+            <h2>Люди рядом</h2>
+            <div id="profiles-list"></div>
+        </section>
 
-/**
- * Запуск воспроизведения выбранного потока
- * @param {string} url - Прямая ссылка на аудиопоток
- * @param {string} stationName - Название станции для статуса
- */
-function playStream(url, stationName) {
-    if (!audioPlayer) return;
+        <!-- Список чатов -->
+        <section id="chats-section" class="hidden">
+            <h2>Ваши чаты</h2>
+            <div id="chats-list"></div>
+        </section>
 
-    audioPlayer.src = url;
-    audioPlayer.load();
+        <!-- Окно чата -->
+        <section id="chat-window-section" class="hidden">
+            <h2 id="chat-title">Чат</h2>
+            <div class="message-box" id="messages-list"></div>
+            <input type="text" id="message-text" placeholder="Сообщение...">
+            <button onclick="sendMessage()">Отправить</button>
+        </section>
+    </div>
 
-    const playPromise = audioPlayer.play();
-    if (playPromise !== undefined) {
-        playPromise
-            .then(() => {
-                if (statusText) statusText.textContent = `Сейчас играет: ${stationName}`;
-            })
-            .catch(error => {
-                console.warn("Ошибка воспроизведения аудио:", error);
-                if (statusText) statusText.textContent = `Пауза: Нажмите Play для ${stationName}`;
-            });
-    }
-}
+    <script>
+        const pb = new PocketBase('http://127.0.0.1:8090');
+        let currentChatId = null;
 
-// ==========================================
-// 3. АВТОРИЗАЦИЯ ОAUTH2 (GOOGLE)
-// ==========================================
-async function loginGoogle() {
-    try {
-        const authData = await pb.collection('users').authWithOAuth2({ provider: 'google' });
-        
-        // Обновляем аватарку и имя в шапке/профиле при успешном входе
-        const user = authData.record;
-        alert(`Добро пожаловать, ${user.name || user.username || user.email}!`);
-        
-        // Обновляем UI после входа
-        updateUserProfileUI(user);
-    } catch (err) {
-        console.error("Ошибка авторизации через Google:", err);
-        alert("Не удалось войти через Google. Проверьте настройки OAuth2 в панели PocketBase.");
-    }
-}
-
-function updateUserProfileUI(user) {
-    const btnGoogle = document.querySelector('.btn-google');
-    if (btnGoogle && user) {
-        btnGoogle.textContent = user.name || 'Профиль';
-        btnGoogle.onclick = openProfileModal;
-    }
-}
-
-// ==========================================
-// 4. ЛОГИКА ЧАТА И REALTIME
-// ==========================================
-const msgInput = document.getElementById('msgInput');
-const chatMessages = document.getElementById('chatMessages');
-
-/**
- * Отправка сообщения в PocketBase или локально
- */
-async function sendMessage() {
-    if (!msgInput) return;
-    
-    const text = msgInput.value.trim();
-    if (!text) return;
-
-    // Очищаем поле ввода
-    msgInput.value = '';
-
-    try {
-        // Попытка отправить в PocketBase
-        await pb.collection('messages').create({
-            text: text,
-            user: pb.authStore.model ? pb.authStore.model.id : null
-        });
-    } catch (err) {
-        console.warn("PocketBase недоступен или произошла ошибка. Сообщение отправлено в локальный режим:", err);
-        
-        // Локальный фолбэк для демонстрации
-        const currentAuthor = pb.authStore.model 
-            ? (pb.authStore.model.name || pb.authStore.model.username) 
-            : 'Гость';
-            
-        appendMessage(currentAuthor, text);
-    }
-}
-
-/**
- * Отрисовка нового сообщения в окне чата
- */
-function appendMessage(author, text) {
-    if (!chatMessages) return;
-
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'chat-msg';
-    
-    // Экранирование HTML от XSS
-    const safeAuthor = escapeHtml(author);
-    const safeText = escapeHtml(text);
-
-    msgDiv.innerHTML = `<div class="author">${safeAuthor}</div>${safeText}`;
-    chatMessages.appendChild(msgDiv);
-    
-    // Автоскролл вниз к последнему сообщению
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-/**
- * Обработка нажатия Enter в поле ввода
- */
-function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-        sendMessage();
-    }
-}
-
-/**
- * Вспомогательная функция защиты от XSS
- */
-function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-// ==========================================
-// 5. ИНИЦИАЛИЗАЦИЯ И REALTIME ПОДПИСКА
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    // Проверка текущей сессии
-    if (pb.authStore.isValid && pb.authStore.model) {
-        updateUserProfileUI(pb.authStore.model);
-    }
-
-    // Подписка на коллекцию messages в режиме реального времени
-    try {
-        pb.collection('messages').subscribe('*', function (e) {
-            if (e.action === 'create') {
-                const authorName = e.record.expand && e.record.expand.user 
-                    ? (e.record.expand.user.name || e.record.expand.user.username) 
-                    : 'Участник';
-                    
-                appendMessage(authorName, e.record.text);
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            try {
+                await pb.collection('users').authWithPassword(email, password);
+                showSection('profiles');
+                loadProfiles();
+            } catch (error) {
+                alert('Ошибка входа: ' + error.message);
             }
-        });
-    } catch (e) {
-        console.log("Realtime подписка ожидает подключения к PocketBase.");
-    }
-});
+        }
+
+        function showSection(section) {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('profiles-section').classList.add('hidden');
+            document.getElementById('chats-section').classList.add('hidden');
+            document.getElementById('chat-window-section').classList.add('hidden');
+            document.getElementById('nav').classList.add('hidden');
+
+            if (section === 'profiles') {
+                document.getElementById('profiles-section').classList.remove('hidden');
+                document.getElementById('nav').classList.remove('hidden');
+            } else if (section === 'chats') {
+                document.getElementById('chats-section').classList.remove('hidden');
+                document.getElementById('nav').classList.remove('hidden');
+                loadChats();
+            } else if (section === 'chat-window') {
+                document.getElementById('chat-window-section').classList.remove('hidden');
+                document.getElementById('nav').classList.remove('hidden');
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+            }
+        }
+
+        async function loadProfiles() {
+            const list = document.getElementById('profiles-list');
+            list.innerHTML = '';
+            try {
+                const records = await pb.collection('profiles').getList(1, 10);
+                records.items.forEach(profile => {
+                    if (profile.user !== pb.authStore.model.id) {
+                        const div = document.createElement('div');
+                        div.className = 'profile-card';
+                        div.innerHTML = `<h3>${profile.name || 'Аноним'}</h3><button onclick="like('${profile.user}')">Лайк</button>`;
+                        list.appendChild(div);
+                    }
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+            }
+        }
+
+        async function like(targetId) {
+            try {
+                const userId = pb.authStore.model.id;
+                await pb.collection('likes').create({ user: userId, target: targetId });
+                
+                const exists = await pb.collection('likes').getList(1, 1, {
+                    filter: `user = "${targetId}" && target = "${userId}"`
+                });
+
+                if (exists.totalItems > 0) {
+                    alert('Взаимная симпатия! Переходим в чат.');
+                    await pb.collection('chats').create({ users: [userId, targetId] });
+                    showSection('chats');
+                } else {
+                    alert('Лайк отправлен!');
+                }
+            } catch (error) {
+                alert('Ошибка лайка: ' + error.message);
+            }
+        }
+
+        async function loadChats() {
+            const list = document.getElementById('chats-list');
+            list.innerHTML = '';
+            try {
+                const userId = pb.authStore.model.id;
+                const records = await pb.collection('chats').getList(1, 20, {
+                    filter: `users ~ "${userId}"`,
+                    expand: 'users'
+                });
+
+                records.items.forEach(chat => {
+                    const otherUser = chat.expand.users.find(u => u.id !== userId);
+                    const div = document.createElement('div');
+                    div.className = 'chat-list-item';
+                    div.innerHTML = `<h3>${otherUser.name || 'Собеседник'}</h3>`;
+                    div.onclick = () => openChat(chat.id, otherUser.name);
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки чатов:', error);
+            }
+        }
+
+        async function openChat(chatId, otherName) {
+            currentChatId = chatId;
+            document.getElementById('chat-title').innerText = `Чат с ${otherName}`;
+            showSection('chat-window');
+            loadMessages();
+        }
+
+        async function loadMessages() {
+            const list = document.getElementById('messages-list');
+            list.innerHTML = '';
+            try {
+                const messages = await pb.collection('messages').getList(1, 50, {
+                    filter: `chat = "${currentChatId}"`,
+                    sort: 'created',
+                    expand: 'sender'
+                });
+
+                messages.items.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `message ${msg.sender === pb.authStore.model.id ? 'sent' : ''}`;
+                    div.innerHTML = `<b>${msg.expand.sender.name}:</b> ${msg.text}`;
+                    list.appendChild(div);
+                });
+                list.scrollTop = list.scrollHeight;
+            } catch (error) {
+                console.error('Ошибка загрузки сообщений:', error);
+            }
+        }
+
+        async function sendMessage() {
+            const text = document.getElementById('message-text').value;
+            if (!text) return;
+
+            try {
+                const count = await pb.collection('messages').getList(1, 1, {
+                    filter: `chat = "${currentChatId}"`
+                });
+
+                if (count.totalItems >= 20) {
+                    const hasPaid = await pb.collection('payments').getList(1, 1, {
+                        filter: `user = "${pb.authStore.model.id}" && chat = "${currentChatId}"`
+                    });
+
+                    if (hasPaid.totalItems === 0) {
+                        alert('Лимит бесплатных сообщений исчерпан. Оплатите 50 рублей для продолжения.');
+                        return;
+                    }
+                }
+
+                await pb.collection('messages').create({
+                    chat: currentChatId,
+                    sender: pb.authStore.model.id,
+                    text: text
+                });
+
+                document.getElementById('message-text').value = '';
+                loadMessages();
+            } catch (error) {
+                alert('Ошибка отправки: ' + error.message);
+            }
+        }
+
+        function logout() {
+            pb.authStore.clear();
+            showSection('auth');
+        }
+
+        if (pb.authStore.isValid) {
+            showSection('profiles');
+            loadProfiles();
+        }
+    </script>
+</body>
+</html>
