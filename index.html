@@ -1,442 +1,168 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spark Мир — AetherSpark</title>
-    <!-- PocketBase SDK -->
-    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+// ==========================================
+// 1. ИНИЦИАЛИЗАЦИЯ И НАСТРОЙКИ POCKETBASE
+// ==========================================
+// Укажите хост вашей локальной или удаленной базы PocketBase
+const POCKETBASE_URL = 'http://127.0.0.1:8090';
+const pb = new PocketBase(POCKETBASE_URL);
 
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0d0e12;
-            color: #e1e1e6;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+// Отключаем авто-отмену запросов для стабильности
+pb.autoCancellation(false);
 
-        /* Главный контейнер */
-        .main-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            overflow-y: auto;
-        }
+// ==========================================
+// 2. УПРАВЛЕНИЕ РАДИОПЛЕЕРОМ
+// ==========================================
+const audioPlayer = document.getElementById('audioPlayer');
+const statusText = document.getElementById('statusText');
 
-        /* Шапка */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #1f222e;
-            margin-bottom: 20px;
-        }
+/**
+ * Запуск воспроизведения выбранного потока
+ * @param {string} url - Прямая ссылка на аудиопоток
+ * @param {string} stationName - Название станции для статуса
+ */
+function playStream(url, stationName) {
+    if (!audioPlayer) return;
 
-        .logo {
-            font-size: 26px;
-            font-weight: 800;
-            color: #ff007f;
-            text-shadow: 0 0 12px rgba(255, 0, 127, 0.6);
-            letter-spacing: 1px;
-        }
+    audioPlayer.src = url;
+    audioPlayer.load();
 
-        .logo span {
-            color: #00f3ff;
-            text-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 20px;
-        }
-
-        .nav-links a {
-            color: #a0a5b5;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: #00f3ff;
-        }
-
-        .btn-google {
-            background: transparent;
-            border: 2px solid #00f3ff;
-            color: #00f3ff;
-            padding: 8px 18px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
-            transition: 0.3s;
-        }
-
-        .btn-google:hover {
-            background: #00f3ff;
-            color: #0d0e12;
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.8);
-        }
-
-        /* Радио секция */
-        .radio-section {
-            background: #14161d;
-            border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid #282c3c;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-
-        .radio-title {
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #00f3ff;
-            letter-spacing: 0.5px;
-        }
-
-        .radio-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .btn-radio {
-            padding: 12px 22px;
-            font-size: 14px;
-            font-weight: 700;
-            color: #fff;
-            background: #0d0e12;
-            border: 2px solid #ff007f;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
-        }
-
-        .btn-radio:hover {
-            background: #ff007f;
-            box-shadow: 0 0 20px rgba(255, 0, 127, 0.8);
-            transform: translateY(-2px);
-        }
-
-        .player-controls {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
-
-        audio {
-            width: 100%;
-            max-width: 500px;
-            height: 45px;
-            border-radius: 10px;
-        }
-
-        #statusText {
-            font-size: 14px;
-            color: #a0a5b5;
-        }
-
-        /* Пользователи / Карточки */
-        .profiles-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: #14161d;
-            border-radius: 16px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid #282c3c;
-            transition: transform 0.3s, border-color 0.3s;
-        }
-
-        .card:hover {
-            transform: translateY(-4px);
-            border-color: #00f3ff;
-            box-shadow: 0 6px 20px rgba(0, 243, 255, 0.15);
-        }
-
-        /* Стильная некруглая аватарка */
-        .card-avatar {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 12px auto;
-            border-radius: 18px; /* Плавный квадрат вместо круга */
-            background: #0d0e12;
-            border: 2px solid #00f3ff;
-            box-shadow: 0 0 12px rgba(0, 243, 255, 0.3), inset 0 0 8px rgba(0, 243, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: bold;
-            color: #00f3ff;
-            transition: all 0.3s ease;
-        }
-
-        .card:hover .card-avatar {
-            border-color: #ff007f;
-            color: #ff007f;
-            box-shadow: 0 0 18px rgba(255, 0, 127, 0.6);
-        }
-
-        .card-name {
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 4px;
-        }
-
-        .card-desc {
-            font-size: 12px;
-            color: #727b90;
-        }
-
-        /* Чат */
-        .chat-sidebar {
-            width: 330px;
-            background: #111217;
-            border-left: 1px solid #1f222e;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-
-        .chat-header {
-            font-size: 16px;
-            font-weight: 800;
-            color: #ff007f;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 1px solid #1f222e;
-            padding-bottom: 10px;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding-right: 5px;
-            margin-bottom: 15px;
-        }
-
-        .chat-msg {
-            background: #181a24;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            border-left: 3px solid #00f3ff;
-            word-break: break-word;
-        }
-
-        .chat-msg .author {
-            font-weight: 700;
-            color: #00f3ff;
-            font-size: 11px;
-            margin-bottom: 4px;
-        }
-
-        .chat-input-area {
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            background: #181a24;
-            border: 1px solid #282c3c;
-            padding: 12px;
-            border-radius: 10px;
-            color: #fff;
-            outline: none;
-            font-size: 13px;
-        }
-
-        .chat-input-area input:focus {
-            border-color: #ff007f;
-            box-shadow: 0 0 8px rgba(255, 0, 127, 0.4);
-        }
-
-        .chat-input-area button {
-            background: #ff007f;
-            border: none;
-            color: #fff;
-            padding: 0 18px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: 0.3s;
-        }
-
-        .chat-input-area button:hover {
-            background: #e0006c;
-            box-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
-        }
-    </style>
-</head>
-<body>
-
-    <div class="main-container">
-        <header>
-            <div class="logo">Spark <span>Мир</span></div>
-            <nav class="nav-links">
-                <a href="#">Главная</a>
-                <a href="#">Сообщения</a>
-                <a href="#" onclick="alert('Профиль доступен после авторизации'); return false;">Профиль</a>
-            </nav>
-            <button class="btn-google" onclick="loginGoogle()">Войти через Google</button>
-        </header>
-
-        <!-- Плеер -->
-        <div class="radio-section">
-            <div class="radio-title">AetherSpark Онлайн Радио</div>
-            <div class="radio-buttons">
-                <button class="btn-radio" onclick="playStream('https://ep128.hostingradio.ru:8030/ep128', 'Европа Плюс')">Европа Плюс</button>
-                <button class="btn-radio" onclick="playStream('https://stream.deepradio.ru/deep', 'Deep House / Techno')">Deep House / Техно</button>
-                <button class="btn-radio" onclick="playStream('https://chanson.hostingradio.ru:8041/chanson128.mp3', 'Радио Шансон')">Шансон</button>
-                <button class="btn-radio" onclick="playStream('https://recordradio.hostingradio.ru/club96.mp3', 'Клубная Зарубежная')">Клубная (Dance)</button>
-            </div>
-            <div class="player-controls">
-                <audio id="audioPlayer" controls></audio>
-                <p id="statusText">Выберите радиостанцию</p>
-            </div>
-        </div>
-
-        <!-- Карточки пользователей с обновленными квадратными аватарками -->
-        <h3 style="margin-bottom: 15px; color: #fff;">Участники</h3>
-        <div class="profiles-grid">
-            <div class="card">
-                <div class="card-avatar">S</div>
-                <div class="card-name">Сергей</div>
-                <div class="card-desc">Создатель</div>
-            </div>
-            <div class="card">
-                <div class="card-avatar">M</div>
-                <div class="card-name">Миша</div>
-                <div class="card-desc">В сети</div>
-            </div>
-            <div class="card">
-                <div class="card-avatar">N</div>
-                <div class="card-name">Никита</div>
-                <div class="card-desc">Не в сети</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Чат -->
-    <div class="chat-sidebar">
-        <div class="chat-header">Чат Сообщества</div>
-        <div class="chat-messages" id="chatMessages">
-            <div class="chat-msg">
-                <div class="author">AetherSpark</div>
-                Добро пожаловать в Spark Мир!
-            </div>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" id="msgInput" placeholder="Сообщение..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Отправить</button>
-        </div>
-    </div>
-
-    <script>
-        // Подключение к PocketBase
-        const POCKETBASE_URL = 'http://127.0.0.1:8090'; 
-        const pb = new PocketBase(POCKETBASE_URL);
-
-        const audioPlayer = document.getElementById('audioPlayer');
-        const statusText = document.getElementById('statusText');
-
-        // Функция запуска радиопотоков
-        function playStream(url, stationName) {
-            audioPlayer.src = url;
-            audioPlayer.play().then(() => {
-                statusText.textContent = `Сейчас играет: ${stationName}`;
-            }).catch(e => {
-                console.error("Ошибка воспроизведения:", e);
-                statusText.textContent = `Ошибка загрузки потока: ${stationName}`;
+    const playPromise = audioPlayer.play();
+    if (playPromise !== undefined) {
+        playPromise
+            .then(() => {
+                if (statusText) statusText.textContent = `Сейчас играет: ${stationName}`;
+            })
+            .catch(error => {
+                console.warn("Ошибка воспроизведения аудио:", error);
+                if (statusText) statusText.textContent = `Пауза: Нажмите Play для ${stationName}`;
             });
-        }
+    }
+}
 
-        // Авторизация Google
-        async function loginGoogle() {
-            try {
-                const authData = await pb.collection('users').authWithOAuth2({ provider: 'google' });
-                alert(`Успешный вход: ${authData.record.email || authData.record.username}`);
-            } catch (err) {
-                console.error("Ошибка авторизации Google:", err);
-                alert("Ошибка входа через Google. Убедитесь, что сервер PocketBase запущен.");
+// ==========================================
+// 3. АВТОРИЗАЦИЯ ОAUTH2 (GOOGLE)
+// ==========================================
+async function loginGoogle() {
+    try {
+        const authData = await pb.collection('users').authWithOAuth2({ provider: 'google' });
+        
+        // Обновляем аватарку и имя в шапке/профиле при успешном входе
+        const user = authData.record;
+        alert(`Добро пожаловать, ${user.name || user.username || user.email}!`);
+        
+        // Обновляем UI после входа
+        updateUserProfileUI(user);
+    } catch (err) {
+        console.error("Ошибка авторизации через Google:", err);
+        alert("Не удалось войти через Google. Проверьте настройки OAuth2 в панели PocketBase.");
+    }
+}
+
+function updateUserProfileUI(user) {
+    const btnGoogle = document.querySelector('.btn-google');
+    if (btnGoogle && user) {
+        btnGoogle.textContent = user.name || 'Профиль';
+        btnGoogle.onclick = openProfileModal;
+    }
+}
+
+// ==========================================
+// 4. ЛОГИКА ЧАТА И REALTIME
+// ==========================================
+const msgInput = document.getElementById('msgInput');
+const chatMessages = document.getElementById('chatMessages');
+
+/**
+ * Отправка сообщения в PocketBase или локально
+ */
+async function sendMessage() {
+    if (!msgInput) return;
+    
+    const text = msgInput.value.trim();
+    if (!text) return;
+
+    // Очищаем поле ввода
+    msgInput.value = '';
+
+    try {
+        // Попытка отправить в PocketBase
+        await pb.collection('messages').create({
+            text: text,
+            user: pb.authStore.model ? pb.authStore.model.id : null
+        });
+    } catch (err) {
+        console.warn("PocketBase недоступен или произошла ошибка. Сообщение отправлено в локальный режим:", err);
+        
+        // Локальный фолбэк для демонстрации
+        const currentAuthor = pb.authStore.model 
+            ? (pb.authStore.model.name || pb.authStore.model.username) 
+            : 'Гость';
+            
+        appendMessage(currentAuthor, text);
+    }
+}
+
+/**
+ * Отрисовка нового сообщения в окне чата
+ */
+function appendMessage(author, text) {
+    if (!chatMessages) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'chat-msg';
+    
+    // Экранирование HTML от XSS
+    const safeAuthor = escapeHtml(author);
+    const safeText = escapeHtml(text);
+
+    msgDiv.innerHTML = `<div class="author">${safeAuthor}</div>${safeText}`;
+    chatMessages.appendChild(msgDiv);
+    
+    // Автоскролл вниз к последнему сообщению
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/**
+ * Обработка нажатия Enter в поле ввода
+ */
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+/**
+ * Вспомогательная функция защиты от XSS
+ */
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ==========================================
+// 5. ИНИЦИАЛИЗАЦИЯ И REALTIME ПОДПИСКА
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Проверка текущей сессии
+    if (pb.authStore.isValid && pb.authStore.model) {
+        updateUserProfileUI(pb.authStore.model);
+    }
+
+    // Подписка на коллекцию messages в режиме реального времени
+    try {
+        pb.collection('messages').subscribe('*', function (e) {
+            if (e.action === 'create') {
+                const authorName = e.record.expand && e.record.expand.user 
+                    ? (e.record.expand.user.name || e.record.expand.user.username) 
+                    : 'Участник';
+                    
+                appendMessage(authorName, e.record.text);
             }
-        }
-
-        // Логика чата
-        async function sendMessage() {
-            const input = document.getElementById('msgInput');
-            const text = input.value.trim();
-            if (!text) return;
-
-            let sentSuccess = false;
-
-            try {
-                // Попытка отправки в PocketBase
-                await pb.collection('messages').create({
-                    text: text,
-                    user: pb.authStore.model ? pb.authStore.model.id : null
-                });
-                sentSuccess = true;
-            } catch (err) {
-                // Если база недоступна, выводим локально для проверки интерфейса
-                appendMessage(pb.authStore.model ? "Вы" : "Гость", text);
-            }
-
-            input.value = '';
-        }
-
-        function appendMessage(author, text) {
-            const chatBox = document.getElementById('chatMessages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'chat-msg';
-            msgDiv.innerHTML = `<div class="author">${author}</div>${text}`;
-            chatBox.appendChild(msgDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        // Подписка Realtime для PocketBase
-        try {
-            pb.collection('messages').subscribe('*', function (e) {
-                if (e.action === 'create') {
-                    const authorName = e.record.expand && e.record.expand.user ? e.record.expand.user.username : 'Участник';
-                    appendMessage(authorName, e.record.text);
-                }
-            });
-        } catch (e) {
-            console.log("Realtime подписка ожидает подключения к PocketBase.");
-        }
-    </script>
-</body>
-</html>
+        });
+    } catch (e) {
+        console.log("Realtime подписка ожидает подключения к PocketBase.");
+    }
+});
