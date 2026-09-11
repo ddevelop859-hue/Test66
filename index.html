@@ -1,228 +1,423 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tanson</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark Мир — AetherSpark</title>
+    <!-- PocketBase SDK -->
+    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-<style>
-body{
-margin:0;
-font-family:Arial;
-background:#0b0f2a;
-color:#fff;
-display:flex;
-flex-direction:column;
-height:100vh;
-}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0b0c10;
+            color: #c5c6c7;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:10px;
-background:#111;
-font-size:18px;
-font-weight:bold;
-}
+        /* Главная область */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
 
-#chat{
-flex:1;
-overflow-y:auto;
-padding:10px;
-display:flex;
-flex-direction:column;
-}
+        /* Шапка сайта */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #1f2833;
+            margin-bottom: 20px;
+        }
 
-.msg{
-background:#1a1f4a;
-padding:8px 12px;
-border-radius:20px;
-margin:5px 0;
-max-width:70%;
-word-wrap:break-word;
-}
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff007f;
+            text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f;
+        }
 
-.me{
-background:#2a6df5;
-margin-left:auto;
-}
+        .logo span {
+            color: #00f3ff;
+            text-shadow: 0 0 10px #00f3ff;
+        }
 
-.bottom{
-display:flex;
-padding:10px;
-background:#000;
-}
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
 
-input{
-flex:1;
-padding:10px;
-border:none;
-border-radius:20px;
-outline:none;
-background:#111;
-color:#fff;
-}
+        .nav-links a {
+            color: #c5c6c7;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
 
-button{
-margin-left:5px;
-padding:10px;
-border:none;
-border-radius:50%;
-background:#2a6df5;
-color:#fff;
-cursor:pointer;
-}
+        .nav-links a:hover {
+            color: #00f3ff;
+        }
 
-#voice-panel{
-display:none;
-background:#111;
-padding:10px;
-text-align:center;
-}
-</style>
+        .btn-google {
+            background: transparent;
+            border: 2px solid #00f3ff;
+            color: #00f3ff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+            transition: 0.3s;
+        }
+
+        .btn-google:hover {
+            background: #00f3ff;
+            color: #0b0c10;
+            box-shadow: 0 0 20px #00f3ff;
+        }
+
+        /* Радио-плеер */
+        .radio-section {
+            background: #1f2833;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #45a29e;
+            box-shadow: 0 0 15px rgba(69, 162, 158, 0.2);
+            text-align: center;
+        }
+
+        .radio-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #66fcf1;
+        }
+
+        .radio-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .btn-radio {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            background: #0b0c10;
+            border: 2px solid #ff007f;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 8px rgba(255, 0, 127, 0.4);
+        }
+
+        .btn-radio:hover {
+            background: #ff007f;
+            box-shadow: 0 0 18px #ff007f;
+            transform: translateY(-2px);
+        }
+
+        .player-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        audio {
+            width: 100%;
+            max-width: 500px;
+            height: 40px;
+            border-radius: 20px;
+        }
+
+        #statusText {
+            font-size: 14px;
+            color: #66fcf1;
+        }
+
+        /* Карточки пользователей */
+        .profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #1f2833;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #333;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #ff007f;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+        }
+
+        .card-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #0b0c10;
+            margin: 0 auto 10px;
+            border: 2px solid #00f3ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #00f3ff;
+        }
+
+        .card-name {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .card-desc {
+            font-size: 12px;
+            color: #c5c6c7;
+        }
+
+        /* Боковой Чат */
+        .chat-sidebar {
+            width: 320px;
+            background: #14181c;
+            border-left: 1px solid #1f2833;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .chat-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ff007f;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 10px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+            margin-bottom: 15px;
+        }
+
+        .chat-msg {
+            background: #1f2833;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            border-left: 3px solid #00f3ff;
+            word-break: break-word;
+        }
+
+        .chat-msg .author {
+            font-weight: bold;
+            color: #66fcf1;
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            background: #0b0c10;
+            border: 1px solid #45a29e;
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #ff007f;
+            box-shadow: 0 0 5px rgba(255, 0, 127, 0.5);
+        }
+
+        .chat-input-area button {
+            background: #ff007f;
+            border: none;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .chat-input-area button:hover {
+            background: #e0006c;
+        }
+    </style>
 </head>
-
 <body>
 
-<header>
-<div>Tanson</div>
-<audio controls autoplay loop>
-<source src="https://europaplus.rastream.com/europaplus128.mp3">
-</audio>
-</header>
+    <!-- Главная область -->
+    <div class="main-container">
+        <header>
+            <div class="logo">Spark <span>Мир</span></div>
+            <nav class="nav-links">
+                <a href="#">Обзор</a>
+                <a href="#">Сообщения</a>
+                <a href="#">Профиль</a>
+                <a href="#">Настройки</a>
+            </nav>
+            <button class="btn-google" onclick="loginGoogle()">Войти через Google</button>
+        </header>
 
-<div id="chat"></div>
+        <!-- Плеер онлайн-радио -->
+        <div class="radio-section">
+            <div class="radio-title">AetherSpark Radio Stream</div>
+            <div class="radio-buttons">
+                <button class="btn-radio" onclick="playStream('https://europa.hostingradio.ru:8080/europaplus128.mp3', 'Европа Плюс')">Европа Плюс</button>
+                <button class="btn-radio" onclick="playStream('https://stream.deepradio.ru/deep', 'Deep House / Techno')">Deep House / Техно</button>
+                <button class="btn-radio" onclick="playStream('https://chanson.hostingradio.ru:8041/chanson128.mp3', 'Радио Шансон')">Шансон</button>
+                <button class="btn-radio" onclick="playStream('https://recordradio.hostingradio.ru/club96.mp3', 'Клубная Зарубежная')">Клубная (Dance)</button>
+            </div>
+            <div class="player-controls">
+                <audio id="audioPlayer" controls></audio>
+                <p id="statusText">Выберите радиостанцию для воспроизведения</p>
+            </div>
+        </div>
 
-<div id="voice-panel">
-<button onclick="stopRec()">⏹</button>
-<button onclick="sendVoice()">✔</button>
-</div>
+        <!-- Мини-карточки профилей -->
+        <h3 style="margin-bottom: 15px; color: #fff;">Пользователи</h3>
+        <div class="profiles-grid">
+            <div class="card">
+                <div class="card-avatar">S</div>
+                <div class="card-name">Сергей</div>
+                <div class="card-desc">Создатель Spark Мир</div>
+            </div>
+            <div class="card">
+                <div class="card-avatar">M</div>
+                <div class="card-name">Миша</div>
+                <div class="card-desc">Online</div>
+            </div>
+            <div class="card">
+                <div class="card-avatar">N</div>
+                <div class="card-name">Никита</div>
+                <div class="card-desc">Offline</div>
+            </div>
+        </div>
+    </div>
 
-<div class="bottom">
-<input id="msg" placeholder="Сообщение...">
-<button onclick="sendMsg()">➤</button>
-<button id="recBtn">🎤</button>
-</div>
+    <!-- Чат -->
+    <div class="chat-sidebar">
+        <div class="chat-header">Чат Сообщества</div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg">
+                <div class="author">Система</div>
+                Добро пожаловать в Spark Мир!
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="msgInput" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
 
-<script>
-const SUPABASE_URL="https://yialdvgdpuazzedpxozc.supabase.co";
-const SUPABASE_KEY="sb_publishable_obvuV6Of_iUSWBy6phzv5w_eSQl0YYt";
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    <script>
+        // === ИНИЦИАЛИЗАЦИЯ POCKETBASE ===
+        // Укажите URL вашего сервера PocketBase (например: 'http://127.0.0.1:8090')
+        const POCKETBASE_URL = 'http://127.0.0.1:8090'; 
+        const pb = new PocketBase(POCKETBASE_URL);
 
-let user={id:"user_"+Math.floor(Math.random()*10000)};
-let chat=document.getElementById("chat");
-let blob=null;
+        // === РАДИО ПЛЕЕР ===
+        const audioPlayer = document.getElementById('audioPlayer');
+        const statusText = document.getElementById('statusText');
 
-/* ===== РЕНДЕР ===== */
-function render(m){
-let d=document.createElement("div");
-d.className="msg"+(m.user_id===user.id?" me":"");
+        function playStream(url, stationName) {
+            audioPlayer.src = url;
+            audioPlayer.play().catch(e => console.log("Ошибка воспроизведения:", e));
+            statusText.textContent = `Сейчас играет: ${stationName}`;
+        }
 
-if(m.type==="voice"){
-let a=document.createElement("audio");
-a.src=m.voice;
-a.controls=true;
-d.appendChild(a);
-}else{
-d.innerText=m.text;
-}
+        // === АВТОРИЗАЦИЯ GOOGLEЧЕРЕЗ POCKETBASE ===
+        async function loginGoogle() {
+            try {
+                const authData = await pb.collection('users').authWithOAuth2({ provider: 'google' });
+                alert(`Успешный вход: ${authData.record.email || authData.record.username}`);
+            } catch (err) {
+                console.error("Ошибка авторизации Google:", err);
+                alert("Ошибка входа через Google. Убедитесь, что OAuth2 настроен в панели PocketBase.");
+            }
+        }
 
-chat.appendChild(d);
-chat.scrollTop=chat.scrollHeight;
-}
+        // === ЧАТ В РЕАЛЬНОМ ВРЕМЕНИ (REALTIME) ===
+        async function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text) return;
 
-/* ===== ЗАГРУЗКА ===== */
-async function load(){
-let {data}=await sb.from("messages").select("*").order("id",{ascending:true});
-chat.innerHTML="";
-data.forEach(render);
-}
-load();
+            try {
+                await pb.collection('messages').create({
+                    text: text,
+                    user: pb.authStore.model ? pb.authStore.model.id : null
+                });
+                input.value = '';
+            } catch (err) {
+                console.warn("PocketBase пока не доступен, сообщение отображено локально.");
+                appendMessage("Вы", text);
+                input.value = '';
+            }
+        }
 
-/* realtime */
-sb.channel("chat")
-.on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},p=>{
-render(p.new);
-})
-.subscribe();
+        function appendMessage(author, text) {
+            const chatBox = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-msg';
+            msgDiv.innerHTML = `<div class="author">${author}</div>${text}`;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
-/* ===== ТЕКСТ ===== */
-async function sendMsg(){
-let text=msg.value;
-if(!text)return;
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
 
-let {data}=await sb.from("messages").insert([{
-user_id:user.id,
-text:text,
-type:"text"
-}]).select();
-
-msg.value="";
-render(data[0]);
-}
-
-/* ===== ГОЛОС ===== */
-let rec,chunks=[];
-
-recBtn.onmousedown=startRec;
-recBtn.onmouseup=stopRec;
-recBtn.ontouchstart=startRec;
-recBtn.ontouchend=stopRec;
-
-async function startRec(){
-const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-rec=new MediaRecorder(stream);
-chunks=[];
-rec.start();
-
-rec.ondataavailable=e=>chunks.push(e.data);
-
-document.getElementById("voice-panel").style.display="block";
-}
-
-function stopRec(){
-if(!rec)return;
-rec.stop();
-
-rec.onstop=()=>{
-blob=new Blob(chunks,{type:"audio/ogg"});
-};
-}
-
-async function sendVoice(){
-if(!blob){
-alert("Нет записи");
-return;
-}
-
-let fileName="voice_"+Date.now()+".ogg";
-
-/* загружаем в storage */
-let {error}=await sb.storage.from("voices").upload(fileName,blob,{upsert:true});
-if(error){
-alert("Ошибка загрузки");
-return;
-}
-
-/* получаем ссылку */
-let {data}=sb.storage.from("voices").getPublicUrl(fileName);
-let url=data.publicUrl;
-
-/* сохраняем в таблицу */
-let {data:msgData}=await sb.from("messages").insert([{
-user_id:user.id,
-type:"voice",
-voice:url
-}]).select();
-
-render(msgData[0]);
-
-blob=null;
-document.getElementById("voice-panel").style.display="none";
-}
-</script>
-
+        // Подписка на коллекцию 'messages' в PocketBase
+        try {
+            pb.collection('messages').subscribe('*', function (e) {
+                if (e.action === 'create') {
+                    const authorName = e.record.expand && e.record.expand.user ? e.record.expand.user.username : 'Участник';
+                    appendMessage(authorName, e.record.text);
+                }
+            });
+        } catch (e) {
+            console.log("Realtime подписка ожидает подключения к PocketBase.");
+        }
+    </script>
 </body>
 </html>
